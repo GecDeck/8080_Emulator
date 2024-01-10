@@ -4,7 +4,6 @@ use disassembler_8080;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
 
     if args.len() < 2 {
         println!("Please provide a file to disassemble");

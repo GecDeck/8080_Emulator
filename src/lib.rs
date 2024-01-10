@@ -5,22 +5,25 @@ use instructions::INSTRUCTIONS;
 
 pub fn disassemble(data: &[u8]) -> Vec<Operation> {
     let mut ops: Vec<Operation> = vec![];
+    let instructions: HashMap<u8, (String, u8)> = get_instruction_set();
 
     let mut index: usize = 0;
     while index < data.len() {
-        let op = get_operation(&data, index);
+        let op = get_operation(&data, index, &instructions);
         index += op.op_bytes as usize;
 
         ops.push(op);
     };
 
+    let mut address: u16 = 0;
     for op in &ops {
         match op.op_bytes {
-            1 => println!("{:02x}           {}", op.op_code, op.instruction),
-            2 => println!("{:02x} {:02x}        {}", op.op_code, op.data.0, op.instruction),
-            3 => println!("{:02x} {:02x} {:02x}     {}", op.op_code, op.data.0, op.data.1, op.instruction),
+            1 => println!("{:04x}   {:02x}          {}", address, op.op_code, op.instruction),
+            2 => println!("{:04x}   {:02x} {:02x}       {}", address, op.op_code, op.data.0, op.instruction),
+            3 => println!("{:04x}   {:02x} {:02x} {:02x}    {}", address, op.op_code, op.data.0, op.data.1, op.instruction),
             _ => panic!(),
         }
+        address += 1;
     }
 
     return ops;
@@ -29,13 +32,25 @@ pub fn disassemble(data: &[u8]) -> Vec<Operation> {
 fn get_instruction_set() -> HashMap<u8, (String, u8)> {
     let mut instruction_set: HashMap<u8, (String, u8)> = HashMap::new();
 
-    for instruction in INSTRUCTIONS.lines() {
-        // split at first whitespace
-        // make first half the op code
-        // get last digit of second half
-        // make that the op bytes
-        // get rest
-        // make that the instruction
+    for instruction_info in INSTRUCTIONS.lines() {
+        // Line should look like this
+        // 0x(hex op code) (operation name) (number of bytes used for operation)
+
+        if instruction_info.chars().last().unwrap() != '-' {
+            // TODO: properly handle these non existent instructions
+            let (op_code_str, op): (&str, &str) = instruction_info.split_once(' ').expect("splitting op code from instruction");
+            let op_code: u8 = u8::from_str_radix(&op_code_str[2..=3], 16).expect("converting hex string slice to byte");
+            // Only using second half because the opcodes are written as 0x[8 bit code]
+
+            let op_bytes: u8 = op.chars().last().expect("getting last char of op string which should be the number of bytes used in op")
+                .to_digit(10).expect("converting digit into u8") as u8;
+            // Getting number of bytes used by the operation
+
+            let instruction = op.trim_end_matches(char::is_numeric).trim();
+            // Trimming op_byte digit and whitespace off end
+
+            instruction_set.insert(op_code, (String::from(instruction), op_bytes));
+        }
     }
 
     return instruction_set;
@@ -62,19 +77,15 @@ impl Operation {
     }
 }
 
-fn get_operation(data: &[u8], index: usize) -> Operation {
-    let op: Operation = match data[index] {
-        0x00 => Operation::new("NOP", data[index], 1, (0, 0)),
-        0x01 => Operation::new("LXI B", data[index], 3, (data[index+2], data[index+1])),
-        0x02 => Operation::new("STAX B", data[index], 1, (0, 0)),
-        0x03 => Operation::new("INX B", data[index], 1, (0, 0)),
-        0x04 => Operation::new("INR B", data[index], 1, (0, 0)),
-        0x05 => Operation::new("DCR B", data[index], 1, (0, 0)),
-        0x06 => Operation::new("MVI B", data[index], 2, (data[index+1], 0)),
-        0x07 => Operation::new("RLC", data[index], 1, (0, 0)),
-        0xc3 => Operation::new("JMP", data[index], 3, (data[index+2], data[index+1])),
-        0xf5 => Operation::new("PUSH PSW", data[index], 1, (0, 0)),
-        _ => Operation::new("", data[index], 1, (0, 0)),
+fn get_operation(data: &[u8], index: usize, instructions: &HashMap<u8, (String, u8)>) -> Operation {
+    let op = match instructions.get(&data[index]) {
+        Some((instruction, op_bytes)) => match op_bytes {
+            1 => Operation::new(instruction, data[index], *op_bytes, (0, 0)),
+            2 => Operation::new(instruction, data[index], *op_bytes, (data[index+1], 0)),
+            3 => Operation::new(instruction, data[index], *op_bytes, (data[index+2], data[index+1])),
+            _ => panic!(),
+        }
+        None => panic!(),
     };
 
     return op;

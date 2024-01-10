@@ -1,5 +1,4 @@
-pub const INSTRUCTIONS: &str = "
-0x00 NOP 1
+pub const INSTRUCTIONS: &str = "0x00 NOP 1
 0x01 LXI B,D16 3
 0x02 STAX B 1
 0x03 INX B 1
@@ -254,5 +253,4 @@ pub const INSTRUCTIONS: &str = "
 0xfc CM adr 3
 0xfd -
 0xfe CPI D8 2
-0xff RST 7 1
-";
+0xff RST 7 1";
