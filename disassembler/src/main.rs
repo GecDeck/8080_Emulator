@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use disassembler_8080;
+use disassembler;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -15,5 +15,5 @@ fn main() {
         Err(e) => panic!("{}", e),
     };
 
-    disassembler_8080::disassemble(&data);
+    disassembler::disassemble(&data);
 }
