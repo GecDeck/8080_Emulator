@@ -1,4 +1,5 @@
 use crate::State;
+use crate::construct_address;
 
 pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
     // Returns the number of additional bytes read for the operation
@@ -73,11 +74,13 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         // MOV OPERATIONS
         0x40 => state.b.write(state.b.read()),
         0x41 => state.b.write(state.c.read()),
+        // Moves the value in C into B
         0x42 => state.b.write(state.d.read()),
         0x43 => state.b.write(state.e.read()),
         0x44 => state.b.write(state.h.read()),
         0x45 => state.b.write(state.l.read()),
-        0x46 => panic!("Should read from the memory at the address stored in HL"),
+        0x46 => state.b.write(state.memory.read_at( construct_address(state.h, state.l) )),
+        // Moves the value in memory at the HL address into register B
         0x47 => state.b.write(state.a.read()),
         0x48 => state.c.write(state.b.read()),
         0x49 => state.c.write(state.c.read()),
@@ -85,7 +88,7 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x4b => state.c.write(state.e.read()),
         0x4c => state.c.write(state.h.read()),
         0x4d => state.c.write(state.l.read()),
-        0x4e => panic!("Should read from the memory at the address stored in HL"),
+        0x4e => state.c.write(state.memory.read_at( construct_address(state.h, state.l) )),
         0x4f => state.c.write(state.a.read()),
         0x50 => state.d.write(state.b.read()),
         0x51 => state.d.write(state.c.read()),
@@ -93,7 +96,7 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x53 => state.d.write(state.e.read()),
         0x54 => state.d.write(state.h.read()),
         0x55 => state.d.write(state.l.read()),
-        0x56 => panic!("Should read from the memory at the address stored in HL"),
+        0x56 => state.d.write(state.memory.read_at( construct_address(state.h, state.l) )),
         0x57 => state.d.write(state.a.read()),
         0x58 => state.e.write(state.b.read()),
         0x59 => state.e.write(state.c.read()),
@@ -101,7 +104,7 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x5b => state.e.write(state.e.read()),
         0x5c => state.e.write(state.h.read()),
         0x5d => state.e.write(state.l.read()),
-        0x5e => panic!("Should read from the memory at the address stored in HL"),
+        0x5e => state.e.write(state.memory.read_at( construct_address(state.h, state.l) )),
         0x5f => state.e.write(state.a.read()),
         0x60 => state.h.write(state.b.read()),
         0x61 => state.h.write(state.c.read()),
@@ -109,7 +112,7 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x63 => state.h.write(state.e.read()),
         0x64 => state.h.write(state.h.read()),
         0x65 => state.h.write(state.l.read()),
-        0x66 => panic!("Should read from the memory at the address stored in HL"),
+        0x66 => state.h.write(state.memory.read_at( construct_address(state.h, state.l) )),
         0x67 => state.h.write(state.a.read()),
         0x68 => state.l.write(state.b.read()),
         0x69 => state.l.write(state.c.read()),
@@ -117,24 +120,25 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x6b => state.l.write(state.e.read()),
         0x6c => state.l.write(state.h.read()),
         0x6d => state.l.write(state.l.read()),
-        0x6e => panic!("Should read from the memory at the address stored in HL"),
+        0x6e => state.l.write(state.memory.read_at( construct_address(state.h, state.l) )),
         0x6f => state.l.write(state.a.read()),
-        0x70 => panic!("Should put into memory at the address stored in HL the value at a register"),
-        0x71 => panic!("Should put into memory at the address stored in HL the value at a register"),
-        0x72 => panic!("Should put into memory at the address stored in HL the value at a register"),
-        0x73 => panic!("Should put into memory at the address stored in HL the value at a register"),
-        0x74 => panic!("Should put into memory at the address stored in HL the value at a register"),
-        0x75 => panic!("Should put into memory at the address stored in HL the value at a register"),
+        0x70 => state.memory.write_at(construct_address(state.h, state.l), state.b.read()),
+        // Move the value in B into memory at the HL address
+        0x71 => state.memory.write_at(construct_address(state.h, state.l), state.c.read()),
+        0x72 => state.memory.write_at(construct_address(state.h, state.l), state.d.read()),
+        0x73 => state.memory.write_at(construct_address(state.h, state.l), state.e.read()),
+        0x74 => state.memory.write_at(construct_address(state.h, state.l), state.h.read()),
+        0x75 => state.memory.write_at(construct_address(state.h, state.l), state.l.read()),
         0x76 => panic!("HALT"),
         // TODO: should halt panic? Need to figure out what halt does
-        0x77 => panic!("Should put into memory at the address stored in HL the value at a register"),
+        0x77 => state.memory.write_at(construct_address(state.h, state.l), state.a.read()),
         0x78 => state.a.write(state.b.read()),
         0x79 => state.a.write(state.c.read()),
         0x7a => state.a.write(state.d.read()),
         0x7b => state.a.write(state.e.read()),
         0x7c => state.a.write(state.h.read()),
         0x7d => state.a.write(state.l.read()),
-        0x7e => panic!("Should read from the memory at the address stored in HL"),
+        0x7e => state.a.write(state.memory.read_at( construct_address(state.h, state.l) )),
         0x7f => state.a.write(state.a.read()),
 
         // ADD OPERATIONS

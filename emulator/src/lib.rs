@@ -1,5 +1,6 @@
 pub mod operations;
 
+#[derive(Clone, Copy)]
 pub struct Register {
     data: u8,
 }
@@ -19,6 +20,7 @@ impl Register {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct AddressPointer {
     address: u16,
 }
@@ -38,6 +40,7 @@ impl AddressPointer {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Memory {
     held_memory: [u8; 65536],
     // 8080 should have 65536 addresses
@@ -58,6 +61,7 @@ impl Memory {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Flags {
     // Flags are set after operations to indicate the results
     flags: u8,
@@ -103,6 +107,7 @@ impl Flags {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct State {
     a: Register,
     b: Register,
@@ -134,9 +139,18 @@ impl State {
     }
 }
 
+fn construct_address(h: Register, l: Register) -> u16 {
+    // Creates an address from reading the value in H and L
+    //  If H is 18 and L is d4 return 18d4
+    // TODO: Ensure HL is the correct order
+
+    return (h.read() as u16) << 8 | l.read() as u16;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::operations::*;
 
     #[test]
     fn test_register_rw() {
@@ -183,5 +197,24 @@ mod tests {
         flags.set_flag(Flag::AC);
         assert_eq!(flags.flags, 0b00001000);
         flags.clear_flags();
+    }
+
+    #[test]
+    fn test_hl_address() {
+        let h: Register = Register { data: 0x18, };
+        let l: Register = Register { data: 0xd4, };
+        assert_eq!(construct_address(h, l), 0x18d4);
+    }
+
+    #[test]
+    fn test_mov_b_hl() {
+        let mut state: State = State::init();
+        state.h.write(0x18);
+        state.l.write(0xd4);
+
+        state.memory.write_at(0x18d4, 0xff);
+
+        handle_op_code(0x46, &mut state);
+        assert_eq!(state.b.read(), 0xff);
     }
 }
