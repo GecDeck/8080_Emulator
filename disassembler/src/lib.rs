@@ -40,21 +40,14 @@ fn get_instruction_set() -> HashMap<u8, (String, u8)> {
         let op_code: u8 = u8::from_str_radix(&op_code_str[2..=3], 16).expect("converting hex string slice to byte");
         // Only using second half because the opcodes are written as 0x[8 bit code]
 
-        if instruction_info.chars().last().unwrap() != '-' {
-            // TODO: properly handle these non existent instructions
+        let op_bytes: u8 = op.chars().last().expect("getting last char of op string which should be the number of bytes used in op")
+            .to_digit(10).expect("converting digit into u8") as u8;
+        // Getting number of bytes used by the operation
 
-            let op_bytes: u8 = op.chars().last().expect("getting last char of op string which should be the number of bytes used in op")
-                .to_digit(10).expect("converting digit into u8") as u8;
-            // Getting number of bytes used by the operation
+        let instruction = op.trim_end_matches(char::is_numeric).trim();
+        // Trimming op_byte digit and whitespace off end
 
-            let instruction = op.trim_end_matches(char::is_numeric).trim();
-            // Trimming op_byte digit and whitespace off end
-
-            instruction_set.insert(op_code, (String::from(instruction), op_bytes));
-        }
-        else {
-            instruction_set.insert(op_code, (String::from("-"), 1));
-        }
+        instruction_set.insert(op_code, (String::from(instruction), op_bytes));
     }
 
     return instruction_set;
