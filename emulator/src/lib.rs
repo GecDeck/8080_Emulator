@@ -1,3 +1,5 @@
+mod operations;
+
 pub struct Register {
     data: u8,
 }
@@ -38,6 +40,10 @@ impl ProgramCounter {
         Self {
             address: 0x00,
         }
+    }
+
+    pub fn increment(&mut self, steps: u16) {
+        self.address += steps;
     }
 }
 
@@ -104,6 +110,20 @@ impl Flags {
     pub fn clear_flags(&mut self) {
         self.flags = 0x00;
     }
+}
+
+pub struct State {
+    a: Register,
+    b: Register,
+    c: Register,
+    d: Register,
+    e: Register,
+    h: Register,
+    l: Register,
+    sp: StackPointer,
+    pc: ProgramCounter,
+    memory: Memory,
+    flags: Flags,
 }
 
 #[cfg(test)]
