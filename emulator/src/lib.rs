@@ -1,4 +1,4 @@
-mod operations;
+pub mod operations;
 
 pub struct Register {
     data: u8,
@@ -19,27 +19,18 @@ impl Register {
     }
 }
 
-struct StackPointer {
+pub struct AddressPointer {
     address: u16,
 }
-impl StackPointer {
+impl AddressPointer {
     pub fn new() -> Self {
-        // TODO: find out where the stack actually starts in memory
         Self {
             address: 0x00,
         }
     }
-}
 
-pub struct ProgramCounter {
-    address: u16,
-}
-impl ProgramCounter {
-    pub fn new() -> Self {
-        // TODO: find out where the program counter actually starts
-        Self {
-            address: 0x00,
-        }
+    pub fn read_address(&self) -> u16 {
+        return self.address;
     }
 
     pub fn increment(&mut self, steps: u16) {
@@ -120,10 +111,27 @@ pub struct State {
     e: Register,
     h: Register,
     l: Register,
-    sp: StackPointer,
-    pc: ProgramCounter,
-    memory: Memory,
+    sp: AddressPointer,
+    pub pc: AddressPointer,
+    pub memory: Memory,
     flags: Flags,
+}
+impl State {
+    pub fn init() -> Self {
+        Self {
+            a: Register::new(),
+            b: Register::new(),
+            c: Register::new(),
+            d: Register::new(),
+            e: Register::new(),
+            h: Register::new(),
+            l: Register::new(),
+            sp: AddressPointer::new(),
+            pc: AddressPointer::new(),
+            memory: Memory::init(),
+            flags: Flags::new(),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1,8 +1,8 @@
-use core::panic;
-
 use crate::State;
 
-pub fn handle_op_code(op_code: u8, state: &mut State) {
+pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
+    // Returns the number of additional bytes read for the operation
+
     match op_code {
         0x00 => {},
         // NOP
@@ -271,5 +271,7 @@ pub fn handle_op_code(op_code: u8, state: &mut State) {
         0xff => panic!("Operation unimplemented"),
     }
 
-    state.pc.increment(1);
+    return 0;
+    // If an operation doesn't specify the number of additional bytes it read
+    //  the function will return 0 additional bytes
 }
