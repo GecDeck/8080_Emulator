@@ -102,6 +102,18 @@ impl Flags {
         // TODO: This might not be necessary
     }
 
+    pub fn clear_flag(&mut self, flag: Flag) {
+        match flag {
+            Flag::Z => self.flags &= 0b01111111,
+            Flag::S => self.flags &= 0b10111111,
+            Flag::P => self.flags &= 0b11011111,
+            Flag::CY => self.flags &= 0b11101111,
+            Flag::AC => self.flags &= 0b11110111,
+        }
+
+        assert_ne!(self.flags << 5, 0b11100000);
+    }
+
     pub fn clear_flags(&mut self) {
         self.flags = 0x00;
     }
@@ -139,13 +151,6 @@ impl State {
     }
 }
 
-fn construct_address(h: Register, l: Register) -> u16 {
-    // Creates an address from reading the value in H and L
-    //  If H is 18 and L is d4 return 18d4
-    // TODO: Ensure HL is the correct order
-
-    return (h.read() as u16) << 8 | l.read() as u16;
-}
 
 #[cfg(test)]
 mod tests {
@@ -175,16 +180,18 @@ mod tests {
     }
 
     #[test]
-    fn test_set_flags() {
+    fn test_flags() {
         let mut flags: Flags = Flags::new();
 
         flags.set_flag(Flag::Z);
         assert_eq!(flags.flags, 0b10000000);
-        flags.clear_flags();
+        flags.clear_flag(Flag::Z);
+        assert!(flags.flags == 0x00);
 
         flags.set_flag(Flag::S);
         assert_eq!(flags.flags, 0b01000000);
-        flags.clear_flags();
+        flags.clear_flag(Flag::S);
+        assert!(flags.flags == 0x00);
 
         flags.set_flag(Flag::P);
         assert_eq!(flags.flags, 0b00100000);
@@ -197,13 +204,6 @@ mod tests {
         flags.set_flag(Flag::AC);
         assert_eq!(flags.flags, 0b00001000);
         flags.clear_flags();
-    }
-
-    #[test]
-    fn test_hl_address() {
-        let h: Register = Register { data: 0x18, };
-        let l: Register = Register { data: 0xd4, };
-        assert_eq!(construct_address(h, l), 0x18d4);
     }
 
     #[test]

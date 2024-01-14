@@ -1,5 +1,38 @@
+use crate::Flags;
 use crate::State;
-use crate::construct_address;
+use crate::Register;
+use crate::Flag;
+
+fn construct_address(h: Register, l: Register) -> u16 {
+    // Creates an address from reading the value in H and L
+    //  If H is 18 and L is d4 return 18d4
+    // TODO: Ensure HL is the correct order
+
+    return (h.read() as u16) << 8 | l.read() as u16;
+}
+
+fn add_op(receiver: u8, sender: i16, flags: &mut Flags) -> u8 {
+    // General add and subtract operation
+    //  Specific implementation for individual add ops will be done in handle_op_code()
+    // A substract operation should send negative values
+
+    let result = receiver as i16 + sender;
+    // Do math with i16 to capture carry and negatives without over or underflow
+
+    if result == 0 { flags.set_flag(Flag::Z) }
+    else { flags.clear_flag(Flag::Z) }
+
+    if result < 0 { flags.set_flag(Flag::S) }
+    else { flags.clear_flag(Flag::S) }
+
+    // TODO: Check for parity and set P
+
+    if result > u8::MAX as i16 { flags.set_flag(Flag::CY) }
+    else { flags.clear_flag(Flag::CY) }
+
+    return (result.abs() & 0xff) as u8;
+    // & 0xff discards anything outside of 8 bits
+}
 
 pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
     // Returns the number of additional bytes read for the operation
@@ -278,4 +311,45 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
     return 0;
     // If an operation doesn't specify the number of additional bytes it read
     //  the function will return 0 additional bytes
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hl_address() {
+        let h: Register = Register { data: 0x18, };
+        let l: Register = Register { data: 0xd4, };
+        assert_eq!(construct_address(h, l), 0x18d4);
+    }
+
+    #[test]
+    fn test_add() {
+        let mut flags: Flags = Flags::new();
+
+        // Basic addition
+        assert_eq!(add_op(80, 10, &mut flags), 90);
+        println!("{:08b}", flags.flags);
+        assert_eq!(flags.flags, 0x00);
+        flags.clear_flags();
+
+        // Z flag setting
+        assert_eq!(add_op(0, 0, &mut flags), 0);
+        assert_eq!(flags.flags, 0b10000000);
+        flags.clear_flags();
+
+        // S flag setting and basic subtraction
+        assert_eq!(add_op(10, -20, &mut flags), 10);
+        // TODO: Check if this should return the absolute value or something like 245
+        assert_eq!(flags.flags, 0b01000000);
+        flags.clear_flags();
+
+        // TODO: Parity test
+
+        // Carry test
+        assert_eq!(add_op(u8::MAX, 2, &mut flags), 1);
+        assert_eq!(flags.flags, 0b00010000);
+        flags.clear_flags();
+    }
 }
