@@ -19,18 +19,24 @@ fn add_op(receiver: u8, sender: i16, flags: &mut Flags) -> u8 {
     let result = receiver as i16 + sender;
     // Do math with i16 to capture carry and negatives without over or underflow
 
+    // Zero check
     if result == 0 { flags.set_flag(Flag::Z) }
     else { flags.clear_flag(Flag::Z) }
 
+    // Negative Check
     if result < 0 { flags.set_flag(Flag::S) }
     else { flags.clear_flag(Flag::S) }
 
-    // TODO: Check for parity and set P
+    // Parity Check
+    let overflowed: u8 = (result.abs() & 0xff) as u8;
+    if overflowed.count_ones() % 2 == 0 { flags.set_flag(Flag::P) }
+    else { flags.clear_flag(Flag::P) }
 
+    // Carry Check
     if result > u8::MAX as i16 { flags.set_flag(Flag::CY) }
     else { flags.clear_flag(Flag::CY) }
 
-    return (result.abs() & 0xff) as u8;
+    return overflowed;
     // & 0xff discards anything outside of 8 bits
 }
 
@@ -329,26 +335,30 @@ mod tests {
         let mut flags: Flags = Flags::new();
 
         // Basic addition
-        assert_eq!(add_op(80, 10, &mut flags), 90);
-        println!("{:08b}", flags.flags);
+        assert_eq!(add_op(80, 8, &mut flags), 88);
         assert_eq!(flags.flags, 0x00);
         flags.clear_flags();
 
         // Z flag setting
         assert_eq!(add_op(0, 0, &mut flags), 0);
-        assert_eq!(flags.flags, 0b10000000);
+        assert_eq!(flags.flags, 0b10100000);
+        // Zero has even 1 parity
         flags.clear_flags();
 
         // S flag setting and basic subtraction
-        assert_eq!(add_op(10, -20, &mut flags), 10);
+        assert_eq!(add_op(10, -21, &mut flags), 11);
         // TODO: Check if this should return the absolute value or something like 245
         assert_eq!(flags.flags, 0b01000000);
         flags.clear_flags();
 
-        // TODO: Parity test
+        // Parity flag setting
+        add_op(1, 2, &mut flags);
+        assert_eq!(flags.flags, 0b00100000);
+        add_op(1, 1, &mut flags);
+        assert_eq!(flags.flags, 0b00000000);
 
         // Carry test
-        assert_eq!(add_op(u8::MAX, 2, &mut flags), 1);
+        assert_eq!(add_op(u8::MAX, 3, &mut flags), 2);
         assert_eq!(flags.flags, 0b00010000);
         flags.clear_flags();
     }
