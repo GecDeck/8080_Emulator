@@ -106,6 +106,26 @@ impl Flags {
         assert_ne!(self.flags << 5, 0b11100000);
     }
 
+    pub fn check_flag(&mut self, flag: Flag) -> u8 {
+        match flag {
+            Flag::Z => if self.flags & 0b10000000 == 0b10000000 {
+                return 1;
+            } else { return 0; },
+            Flag::S => if self.flags & 0b01000000 == 0b01000000 {
+                return 1;
+            } else { return 0; },
+            Flag::P => if self.flags & 0b00100000 == 0b00100000 {
+                return 1;
+            } else { return 0; },
+            Flag::CY => if self.flags & 0b00010000 == 0b00010000 {
+                return 1;
+            } else { return 0; },
+            Flag::AC => if self.flags & 0b00001000 == 0b00001000 {
+                return 1;
+            } else { return 0; },
+        }
+    }
+
     pub fn clear_flags(&mut self) {
         self.flags = 0x00;
     }
@@ -147,17 +167,6 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::operations::*;
-
-    #[test]
-    fn test_register_rw() {
-        let mut test_reg: Register = Register::new();
-
-        assert_eq!(test_reg.read(), 0x00);
-
-        test_reg.write(0xff);
-        assert_eq!(test_reg.read(), 0xff);
-    }
 
     #[test]
     fn test_memory_rw() {
@@ -177,6 +186,7 @@ mod tests {
 
         flags.set_flag(Flag::Z);
         assert_eq!(flags.flags, 0b10000000);
+        assert_eq!(flags.check_flag(Flag::Z), 1);
         flags.clear_flag(Flag::Z);
         assert!(flags.flags == 0x00);
 
@@ -196,17 +206,5 @@ mod tests {
         flags.set_flag(Flag::AC);
         assert_eq!(flags.flags, 0b00001000);
         flags.clear_flags();
-    }
-
-    #[test]
-    fn test_mov_b_hl() {
-        let mut state: State = State::init();
-        state.h.write(0x18);
-        state.l.write(0xd4);
-
-        state.memory.write_at(0x18d4, 0xff);
-
-        handle_op_code(0x46, &mut state);
-        assert_eq!(state.b.read(), 0xff);
     }
 }

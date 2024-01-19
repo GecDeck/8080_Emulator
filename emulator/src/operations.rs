@@ -8,7 +8,7 @@ fn construct_address(h: Register, l: Register) -> u16 {
     //  If H is 18 and L is d4 return 18d4
     // TODO: Ensure HL is the correct order
 
-    return (h.read() as u16) << 8 | l.read() as u16;
+    return (h.value as u16) << 8 | l.value as u16;
 }
 
 fn add_op(receiver: u8, sender: i16, flags: &mut Flags) -> u8 {
@@ -331,8 +331,8 @@ mod tests {
 
     #[test]
     fn test_hl_address() {
-        let h: Register = Register { data: 0x18, };
-        let l: Register = Register { data: 0xd4, };
+        let h: Register = Register { value: 0x18, };
+        let l: Register = Register { value: 0xd4, };
         assert_eq!(construct_address(h, l), 0x18d4);
     }
 
@@ -367,5 +367,47 @@ mod tests {
         assert_eq!(add_op(u8::MAX, 3, &mut flags), 2);
         assert_eq!(flags.flags, 0b00010000);
         flags.clear_flags();
+    }
+
+    #[test]
+    fn test_operation_handling() {
+        let mut state: State = State::init();
+
+        // MOV test C -> B
+        state.c.value = 0xd4;
+        handle_op_code(0x41, &mut state);
+        assert_eq!(state.b.value, 0xd4);
+
+        // MOV test C -> M
+        state.h.value = 0x18;
+        state.l.value = 0xd4;
+        state.c.value = 0xff;
+
+        handle_op_code(0x71, &mut state);
+        assert_eq!(state.memory.read_at(construct_address(state.h, state.l)), 0xff);
+
+        // MOV test M -> B
+        handle_op_code(0x46, &mut state);
+        assert_eq!(state.b.value, 0xff);
+
+        // ADD test A + B -> A
+        state.a.value = 0xf0;
+        state.b.value = 0x0f;
+
+        handle_op_code(0x80, &mut state);
+        assert_eq!(state.a.value, 0xff);
+
+        // ADC test A + M + CY -> A
+        // TODO: Write this
+
+        // SUB test A - M -> A
+        state.a.value = 0xff;
+
+        assert_eq!(state.memory.read_at(construct_address(state.h, state.l)), 0xff);
+        handle_op_code(0x96, &mut state);
+        assert_eq!(state.a.value, 0x00);
+
+        // SBB test A - C - CY -> A
+        // TODO: Write this
     }
 }
