@@ -2,21 +2,13 @@ pub mod operations;
 
 #[derive(Clone, Copy)]
 pub struct Register {
-    data: u8,
+    pub value: u8,
 }
 impl Register {
     pub fn new() -> Self {
         Self {
-            data: 0x00
+            value: 0x00
         }
-    }
-
-    pub fn read(&self) -> u8 {
-        return self.data;
-    }
-
-    pub fn write(&mut self, byte: u8) {
-        self.data = byte;
     }
 }
 
