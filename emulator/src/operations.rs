@@ -8,7 +8,7 @@ fn construct_address(h: Register, l: Register) -> u16 {
     //  If H is 18 and L is d4 return 18d4
     // TODO: Ensure HL is the correct order
 
-    return (h.value as u16) << 8 | l.value as u16;
+    (h.value as u16) << 8 | l.value as u16
 }
 
 fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -18,7 +18,7 @@ fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // Do math with i16 to capture carry and negatives without over or underflow
     set_flags_from_operation(result as i16, flags);
 
-    return (result & 0xff) as u8;
+    (result & 0xff) as u8
     // & 0xff discards anything outside of 8 bits
 }
 
@@ -28,7 +28,7 @@ fn adc(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     let carry: u8 = flags.check_flag(Flag::CY);
     let result: u16 = add(reg_1, reg_2, flags) as u16 + carry as u16;
 
-    return (result & 0xff) as u8;
+    (result & 0xff) as u8
 }
 
 fn sub(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -37,7 +37,7 @@ fn sub(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     let result = reg_1 as i16 - reg_2 as i16;
     set_flags_from_operation(result, flags);
 
-    return (result & 0xff).abs() as u8;
+    (result & 0xff).unsigned_abs() as u8
 }
 
 fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -46,7 +46,7 @@ fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     let carry: u8 = flags.check_flag(Flag::CY);
     let result: i16 = sub(reg_1, reg_2, flags) as i16 - carry as i16;
 
-    return (result & 0xff).abs() as u8;
+    (result & 0xff).unsigned_abs() as u8
 }
 
 fn set_flags_from_operation(result: i16, flags: &mut Flags) {
@@ -346,7 +346,7 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0xff => panic!("Operation unimplemented"),
     }
 
-    return 0;
+    0
     // If an operation doesn't specify the number of additional bytes it read
     //  the function will return 0 additional bytes
 }
@@ -364,9 +364,9 @@ mod tests {
 
     #[test]
     fn test_operation_flag_setting() {
-        let mut flags: Flags = Flags::new();
+        let mut flags: Flags = Flags::default();
 
-        // Basic addition
+        // No flags
         set_flags_from_operation(2, &mut flags);
         assert_eq!(flags.flags, 0x00);
 
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_arithmetic_operations() {
-        let mut flags: Flags = Flags::new();
+        let mut flags: Flags = Flags::default();
 
         // ADD
         assert_eq!(add(0, 2, &mut flags), 2);

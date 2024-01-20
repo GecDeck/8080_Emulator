@@ -9,7 +9,7 @@ pub fn disassemble(data: &[u8]) -> Vec<Operation> {
 
     let mut index: usize = 0;
     while index < data.len() {
-        let op = get_operation(&data, index, &instructions);
+        let op = get_operation(data, index, &instructions);
         index += op.op_bytes as usize;
 
         ops.push(op);
@@ -26,7 +26,7 @@ pub fn disassemble(data: &[u8]) -> Vec<Operation> {
         address += op.op_bytes as u16;
     }
 
-    return ops;
+    ops
 }
 
 fn get_instruction_set() -> HashMap<u8, (String, u8)> {
@@ -50,7 +50,7 @@ fn get_instruction_set() -> HashMap<u8, (String, u8)> {
         instruction_set.insert(op_code, (String::from(instruction), op_bytes));
     }
 
-    return instruction_set;
+    instruction_set
 }
 
 pub struct Operation {
@@ -90,5 +90,5 @@ fn get_operation(data: &[u8], index: usize, instructions: &HashMap<u8, (String, 
         },
     };
 
-    return op;
+    op
 }

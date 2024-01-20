@@ -11,41 +11,42 @@ impl Register {
         }
     }
 }
+impl Default for Register {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct AddressPointer {
-    address: u16,
+    pub address: u16,
 }
 impl AddressPointer {
-    pub fn new() -> Self {
+    pub fn at(address: u16) -> Self {
         Self {
-            address: 0x00,
+            address,
         }
-    }
-
-    pub fn read_address(&self) -> u16 {
-        return self.address;
-    }
-
-    pub fn increment(&mut self, steps: u16) {
-        self.address += steps;
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct Memory {
-    held_memory: [u8; 65536],
+    held_memory: [u8; 0xffff],
     // 8080 should have 65536 addresses
+    // 0x0000 -> 0x2000 should contain rom
+    // 0x2001 -> 0x2400 is ram
+    // 0x2401 -> 0x4000 is vram
+    // 0x4000 -> 0xffff is a mirror
 }
 impl Memory {
     pub fn init() -> Self {
         Self {
-            held_memory: [0x00; 65536],
+            held_memory: [0x00; 0xffff],
         }
     }
 
     pub fn read_at(&self, addr: u16) -> u8 {
-        return self.held_memory[addr as usize];
+        self.held_memory[addr as usize]
     }
 
     pub fn write_at(&mut self, addr: u16, byte: u8) {
@@ -108,26 +109,26 @@ impl Flags {
 
     pub fn check_flag(&mut self, flag: Flag) -> u8 {
         match flag {
-            Flag::Z => if self.flags & 0b10000000 == 0b10000000 {
-                return 1;
-            } else { return 0; },
-            Flag::S => if self.flags & 0b01000000 == 0b01000000 {
-                return 1;
-            } else { return 0; },
-            Flag::P => if self.flags & 0b00100000 == 0b00100000 {
-                return 1;
-            } else { return 0; },
-            Flag::CY => if self.flags & 0b00010000 == 0b00010000 {
-                return 1;
-            } else { return 0; },
-            Flag::AC => if self.flags & 0b00001000 == 0b00001000 {
-                return 1;
-            } else { return 0; },
+            Flag::Z => if self.flags & 0b10000000 == 0b10000000 { 1 }
+            else { 0 },
+            Flag::S => if self.flags & 0b01000000 == 0b01000000 { 1 }
+            else { 0 },
+            Flag::P => if self.flags & 0b00100000 == 0b00100000 { 1 }
+            else { 0 },
+            Flag::CY => if self.flags & 0b00010000 == 0b00010000 { 1 }
+            else { 0 },
+            Flag::AC => if self.flags & 0b00001000 == 0b00001000 { 1 }
+            else { 0 },
         }
     }
 
     pub fn clear_flags(&mut self) {
         self.flags = 0x00;
+    }
+}
+impl Default for Flags {
+    fn default() -> Self {
+        Flags::new()
     }
 }
 
@@ -148,17 +149,18 @@ pub struct State {
 impl State {
     pub fn init() -> Self {
         Self {
-            a: Register::new(),
-            b: Register::new(),
-            c: Register::new(),
-            d: Register::new(),
-            e: Register::new(),
-            h: Register::new(),
-            l: Register::new(),
-            sp: AddressPointer::new(),
-            pc: AddressPointer::new(),
+            a: Register::default(),
+            b: Register::default(),
+            c: Register::default(),
+            d: Register::default(),
+            e: Register::default(),
+            h: Register::default(),
+            l: Register::default(),
+            sp: AddressPointer::at(0x2400),
+            // Stack pointer starts at end of ram and decrements on push
+            pc: AddressPointer::at(0x0000),
             memory: Memory::init(),
-            flags: Flags::new(),
+            flags: Flags::default(),
         }
     }
 }
@@ -172,7 +174,7 @@ mod tests {
     fn test_memory_rw() {
         let mut test_mem: Memory = Memory::init();
 
-        for i in 0..=65535 {
+        for i in 0..65535 {
             assert_eq!(test_mem.read_at(i), 0x00);
 
             test_mem.write_at(i, 0xff);
@@ -182,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_flags() {
-        let mut flags: Flags = Flags::new();
+        let mut flags: Flags = Flags::default();
 
         flags.set_flag(Flag::Z);
         assert_eq!(flags.flags, 0b10000000);
