@@ -11,13 +11,46 @@ fn construct_address(h: Register, l: Register) -> u16 {
     return (h.value as u16) << 8 | l.value as u16;
 }
 
-fn add_op(receiver: u8, sender: i16, flags: &mut Flags) -> u8 {
-    // General add and subtract operation
-    //  Specific implementation for individual add ops will be done in handle_op_code()
-    // A substract operation should send negative values
+fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // General add operation
 
-    let result = receiver as i16 + sender;
+    let result = reg_1 as u16 + reg_2 as u16;
     // Do math with i16 to capture carry and negatives without over or underflow
+    set_flags_from_operation(result as i16, flags);
+
+    return (result & 0xff) as u8;
+    // & 0xff discards anything outside of 8 bits
+}
+
+fn adc(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // ADD but also adds value from carry flag
+
+    let carry: u8 = flags.check_flag(Flag::CY);
+    let result: u16 = add(reg_1, reg_2, flags) as u16 + carry as u16;
+
+    return (result & 0xff) as u8;
+}
+
+fn sub(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // Basic subtraction operation
+
+    let result = reg_1 as i16 - reg_2 as i16;
+    set_flags_from_operation(result, flags);
+
+    return (result & 0xff).abs() as u8;
+}
+
+fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // SUB but also removes the value of the carry flag
+
+    let carry: u8 = flags.check_flag(Flag::CY);
+    let result: i16 = sub(reg_1, reg_2, flags) as i16 - carry as i16;
+
+    return (result & 0xff).abs() as u8;
+}
+
+fn set_flags_from_operation(result: i16, flags: &mut Flags) {
+    // Sets flags based on the result of an arithmetic operation
 
     // Zero check
     if result == 0 { flags.set_flag(Flag::Z) }
@@ -28,16 +61,13 @@ fn add_op(receiver: u8, sender: i16, flags: &mut Flags) -> u8 {
     else { flags.clear_flag(Flag::S) }
 
     // Parity Check
-    let overflowed: u8 = (result.abs() & 0xff) as u8;
-    if overflowed.count_ones() % 2 == 0 { flags.set_flag(Flag::P) }
+    if ((result & 0xff) as u8).count_ones() % 2 == 0 { flags.set_flag(Flag::P) }
     else { flags.clear_flag(Flag::P) }
 
     // Carry Check
     if result > u8::MAX as i16 { flags.set_flag(Flag::CY) }
     else { flags.clear_flag(Flag::CY) }
 
-    return overflowed;
-    // & 0xff discards anything outside of 8 bits
 }
 
 pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
@@ -181,46 +211,42 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x7f => state.a.value = state.a.value,
 
         // ADD OPERATIONS
-        0x80 => state.a.value = add_op(state.a.value, state.b.value as i16, &mut state.flags),
-        0x81 => state.a.value = add_op(state.a.value, state.c.value as i16, &mut state.flags),
-        0x82 => state.a.value = add_op(state.a.value, state.d.value as i16, &mut state.flags),
-        0x83 => state.a.value = add_op(state.a.value, state.e.value as i16, &mut state.flags),
-        0x84 => state.a.value = add_op(state.a.value, state.h.value as i16, &mut state.flags),
-        0x85 => state.a.value = add_op(state.a.value, state.l.value as i16, &mut state.flags),
-        0x86 => state.a.value = add_op(
-            state.a.value,
-            state.memory.read_at( construct_address(state.h, state.l) ) as i16,
-            &mut state.flags),
-        0x87 => state.a.value = add_op(state.a.value, state.a.value as i16, &mut state.flags),
-        0x88 => panic!("Operation unimplemented"),
-        0x89 => panic!("Operation unimplemented"),
-        0x8a => panic!("Operation unimplemented"),
-        0x8b => panic!("Operation unimplemented"),
-        0x8c => panic!("Operation unimplemented"),
-        0x8d => panic!("Operation unimplemented"),
-        0x8e => panic!("Operation unimplemented"),
-        0x8f => panic!("Operation unimplemented"),
+        0x80 => state.a.value = add(state.a.value, state.b.value, &mut state.flags),
+        0x81 => state.a.value = add(state.a.value, state.c.value, &mut state.flags),
+        0x82 => state.a.value = add(state.a.value, state.d.value, &mut state.flags),
+        0x83 => state.a.value = add(state.a.value, state.e.value, &mut state.flags),
+        0x84 => state.a.value = add(state.a.value, state.h.value, &mut state.flags),
+        0x85 => state.a.value = add(state.a.value, state.l.value, &mut state.flags),
+        0x86 => state.a.value = add(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
+        0x87 => state.a.value = add(state.a.value, state.a.value, &mut state.flags),
+        // ADC
+        0x88 => state.a.value = adc(state.a.value, state.b.value, &mut state.flags),
+        0x89 => state.a.value = adc(state.a.value, state.c.value, &mut state.flags),
+        0x8a => state.a.value = adc(state.a.value, state.d.value, &mut state.flags),
+        0x8b => state.a.value = adc(state.a.value, state.e.value, &mut state.flags),
+        0x8c => state.a.value = adc(state.a.value, state.h.value, &mut state.flags),
+        0x8d => state.a.value = adc(state.a.value, state.l.value, &mut state.flags),
+        0x8e => state.a.value = adc(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
+        0x8f => state.a.value = adc(state.a.value, state.a.value, &mut state.flags),
 
         // SUBTRACT OPERATIONS
-        0x90 => state.a.value = add_op(state.a.value, -(state.b.value as i16), &mut state.flags),
-        0x91 => state.a.value = add_op(state.a.value, -(state.c.value as i16), &mut state.flags),
-        0x92 => state.a.value = add_op(state.a.value, -(state.d.value as i16), &mut state.flags),
-        0x93 => state.a.value = add_op(state.a.value, -(state.e.value as i16), &mut state.flags),
-        0x94 => state.a.value = add_op(state.a.value, -(state.h.value as i16), &mut state.flags),
-        0x95 => state.a.value = add_op(state.a.value, -(state.l.value as i16), &mut state.flags),
-        0x96 => state.a.value = add_op(
-            state.a.value,
-            -( state.memory.read_at( construct_address(state.h, state.l) ) as i16 ),
-            &mut state.flags),
-        0x97 => state.a.value = add_op(state.a.value, -(state.a.value as i16), &mut state.flags),
-        0x98 => panic!("Operation unimplemented"),
-        0x99 => panic!("Operation unimplemented"),
-        0x9a => panic!("Operation unimplemented"),
-        0x9b => panic!("Operation unimplemented"),
-        0x9c => panic!("Operation unimplemented"),
-        0x9d => panic!("Operation unimplemented"),
-        0x9e => panic!("Operation unimplemented"),
-        0x9f => panic!("Operation unimplemented"),
+        0x90 => state.a.value = sub(state.a.value, state.b.value, &mut state.flags),
+        0x91 => state.a.value = sub(state.a.value, state.c.value, &mut state.flags),
+        0x92 => state.a.value = sub(state.a.value, state.d.value, &mut state.flags),
+        0x93 => state.a.value = sub(state.a.value, state.e.value, &mut state.flags),
+        0x94 => state.a.value = sub(state.a.value, state.h.value, &mut state.flags),
+        0x95 => state.a.value = sub(state.a.value, state.l.value, &mut state.flags),
+        0x96 => state.a.value = sub(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
+        0x97 => state.a.value = sub(state.a.value, state.a.value, &mut state.flags),
+        // SBB
+        0x98 => state.a.value = sbb(state.a.value, state.b.value, &mut state.flags),
+        0x99 => state.a.value = sbb(state.a.value, state.c.value, &mut state.flags),
+        0x9a => state.a.value = sbb(state.a.value, state.d.value, &mut state.flags),
+        0x9b => state.a.value = sbb(state.a.value, state.e.value, &mut state.flags),
+        0x9c => state.a.value = sbb(state.a.value, state.h.value, &mut state.flags),
+        0x9d => state.a.value = sbb(state.a.value, state.l.value, &mut state.flags),
+        0x9e => state.a.value = sbb(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
+        0x9f => state.a.value = sbb(state.a.value, state.a.value, &mut state.flags),
 
         0xa0 => panic!("Operation unimplemented"),
         0xa1 => panic!("Operation unimplemented"),
@@ -337,36 +363,56 @@ mod tests {
     }
 
     #[test]
-    fn test_add() {
+    fn test_operation_flag_setting() {
         let mut flags: Flags = Flags::new();
 
         // Basic addition
-        assert_eq!(add_op(80, 8, &mut flags), 88);
+        set_flags_from_operation(2, &mut flags);
         assert_eq!(flags.flags, 0x00);
-        flags.clear_flags();
 
         // Z flag setting
-        assert_eq!(add_op(0, 0, &mut flags), 0);
+        set_flags_from_operation(0, &mut flags);
         assert_eq!(flags.flags, 0b10100000);
         // Zero has even 1 parity
-        flags.clear_flags();
 
-        // S flag setting and basic subtraction
-        assert_eq!(add_op(10, -21, &mut flags), 11);
-        // TODO: Check if this should return the absolute value or something like 245
+        // S flag setting
+        set_flags_from_operation(-2, &mut flags);
         assert_eq!(flags.flags, 0b01000000);
-        flags.clear_flags();
 
         // Parity flag setting
-        add_op(1, 2, &mut flags);
+        set_flags_from_operation(3, &mut flags);
         assert_eq!(flags.flags, 0b00100000);
-        add_op(1, 1, &mut flags);
+        set_flags_from_operation(2, &mut flags);
         assert_eq!(flags.flags, 0b00000000);
 
         // Carry test
-        assert_eq!(add_op(u8::MAX, 3, &mut flags), 2);
+        set_flags_from_operation(258, &mut flags);
         assert_eq!(flags.flags, 0b00010000);
-        flags.clear_flags();
+    }
+
+    #[test]
+    fn test_arithmetic_operations() {
+        let mut flags: Flags = Flags::new();
+
+        // ADD
+        assert_eq!(add(0, 2, &mut flags), 2);
+        assert_eq!(add(0xff, 3, &mut flags), 2);
+
+        // ADC
+        flags.set_flag(Flag::CY);
+        assert_eq!(adc(0, 2, &mut flags), 3);
+        flags.set_flag(Flag::CY);
+        assert_eq!(adc(0xff, 0, &mut flags), 0);
+
+        // SUB
+        assert_eq!(sub(9, 8, &mut flags), 1);
+        assert_eq!(sub(0, 1, &mut flags), 255);
+
+        // SBB
+        flags.set_flag(Flag::CY);
+        assert_eq!(sbb(10, 9, &mut flags), 0);
+        flags.set_flag(Flag::CY);
+        assert_eq!(sbb(0, 0, &mut flags), 255);
     }
 
     #[test]
@@ -398,16 +444,35 @@ mod tests {
         assert_eq!(state.a.value, 0xff);
 
         // ADC test A + M + CY -> A
-        // TODO: Write this
+        // Putting 0x02 in memory
+        state.h.value = 0x18;
+        state.l.value = 0xd4;
+        state.memory.write_at(0x18d4, 0x02);
+
+        state.flags.set_flag(Flag::CY);
+        state.a.value = 0x02;
+
+        handle_op_code(0x8e, &mut state);
+        assert_eq!(state.a.value, 0x05);
+        // A = 2, M = 2, CY = 1 ... = 5
 
         // SUB test A - M -> A
+        // Putting 0xff into memory
+        state.h.value = 0x18;
+        state.l.value = 0xd4;
+        state.memory.write_at(0x18d4, 0xff);
+
         state.a.value = 0xff;
 
-        assert_eq!(state.memory.read_at(construct_address(state.h, state.l)), 0xff);
         handle_op_code(0x96, &mut state);
         assert_eq!(state.a.value, 0x00);
 
         // SBB test A - C - CY -> A
-        // TODO: Write this
+        state.a.value = 0x09;
+        state.c.value = 0x08;
+        state.flags.set_flag(Flag::CY);
+
+        handle_op_code(0x99, &mut state);
+        assert_eq!(state.a.value, 0x00);
     }
 }
