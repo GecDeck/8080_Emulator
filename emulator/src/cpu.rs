@@ -467,7 +467,10 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xc3 => panic!("Operation unimplemented"),
         0xc4 => panic!("Operation unimplemented"),
         0xc5 => panic!("Operation unimplemented"),
-        0xc6 => panic!("Operation unimplemented"),
+        0xc6 => { // ADI
+            cpu.a.value = add(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
+            return 1;
+        },
         0xc7 => panic!("Operation unimplemented"),
         0xc8 => panic!("Operation unimplemented"),
         0xc9 => panic!("Operation unimplemented"),
@@ -475,7 +478,10 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xcb => panic!("Operation unimplemented"),
         0xcc => panic!("Operation unimplemented"),
         0xcd => panic!("Operation unimplemented"),
-        0xce => panic!("Operation unimplemented"),
+        0xce => { // ACI
+            cpu.a.value = adc(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
+            return 1;
+        },
         0xcf => panic!("Operation unimplemented"),
         0xd0 => panic!("Operation unimplemented"),
         0xd1 => panic!("Operation unimplemented"),
@@ -483,7 +489,10 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xd3 => panic!("Operation unimplemented"),
         0xd4 => panic!("Operation unimplemented"),
         0xd5 => panic!("Operation unimplemented"),
-        0xd6 => panic!("Operation unimplemented"),
+        0xd6 => { // SUI
+            cpu.a.value = sub(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
+            return 1;
+        },
         0xd7 => panic!("Operation unimplemented"),
         0xd8 => panic!("Operation unimplemented"),
         0xd9 => panic!("Operation unimplemented"),
@@ -491,7 +500,10 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xdb => panic!("Operation unimplemented"),
         0xdc => panic!("Operation unimplemented"),
         0xdd => panic!("Operation unimplemented"),
-        0xde => panic!("Operation unimplemented"),
+        0xde => { // SBI
+            cpu.a.value = sbb(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
+            return 1;
+        },
         0xdf => panic!("Operation unimplemented"),
         0xe0 => panic!("Operation unimplemented"),
         0xe1 => panic!("Operation unimplemented"),
