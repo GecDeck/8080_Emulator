@@ -1,10 +1,11 @@
 use std::env;
 
 use emulator::cpu;
-use emulator::cpu::State;
+use emulator::cpu::Cpu;
 
 fn main() {
-    let mut state: State = State::init();
+    let mut cpu: Cpu = Cpu::init();
+    // Initialize Cpu
 
     let args: Vec<String> = env::args().collect();
 
@@ -13,13 +14,14 @@ fn main() {
     }
 
     let file_path: &str = &args[1];
-    state.memory.load_rom(file_path);
+    cpu.memory.load_rom(file_path);
+    // Loads Rom into memory
 
     loop {
-        let op_code: u8 = state.memory.read_at(state.pc.address);
-        state.pc.address += 1;
+        let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
+        cpu.pc.address += 1;
 
-        let additional_bytes: u16 = cpu::handle_op_code(op_code, &mut state);
-        state.pc.address += additional_bytes;
+        let additional_bytes: u16 = cpu::handle_op_code(op_code, &mut cpu);
+        cpu.pc.address += additional_bytes;
     }
 }

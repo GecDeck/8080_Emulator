@@ -150,7 +150,7 @@ impl Default for Flags {
 }
 
 #[derive(Clone, Copy)]
-pub struct State {
+pub struct Cpu {
     a: Register,
     b: Register,
     c: Register,
@@ -163,7 +163,7 @@ pub struct State {
     pub memory: Memory,
     flags: Flags,
 }
-impl State {
+impl Cpu {
     pub fn init() -> Self {
         Self {
             a: Register::default(),
@@ -251,7 +251,7 @@ fn set_flags_from_operation(result: i16, flags: &mut Flags) {
 
 }
 
-pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
+pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
     // Returns the number of additional bytes read for the operation
 
     match op_code {
@@ -322,112 +322,112 @@ pub fn handle_op_code(op_code: u8, state: &mut State) -> u16 {
         0x3f => panic!("Operation unimplemented"),
 
         // MOV OPERATIONS
-        0x40 => state.b.value = state.b.value,
-        0x41 => state.b.value = state.c.value,
+        0x40 => cpu.b.value = cpu.b.value,
+        0x41 => cpu.b.value = cpu.c.value,
         // Moves the value in C into B
-        0x42 => state.b.value = state.d.value,
-        0x43 => state.b.value = state.e.value,
-        0x44 => state.b.value = state.h.value,
-        0x45 => state.b.value = state.l.value,
-        0x46 => state.b.value = state.memory.read_at( construct_address(state.h, state.l) ),
+        0x42 => cpu.b.value = cpu.d.value,
+        0x43 => cpu.b.value = cpu.e.value,
+        0x44 => cpu.b.value = cpu.h.value,
+        0x45 => cpu.b.value = cpu.l.value,
+        0x46 => cpu.b.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
         // Moves the value in memory at the HL address into register B
-        0x47 => state.b.value = state.a.value,
-        0x48 => state.c.value = state.b.value,
-        0x49 => state.c.value = state.c.value,
-        0x4a => state.c.value = state.d.value,
-        0x4b => state.c.value = state.e.value,
-        0x4c => state.c.value = state.h.value,
-        0x4d => state.c.value = state.l.value,
-        0x4e => state.c.value = state.memory.read_at( construct_address(state.h, state.l) ),
-        0x4f => state.c.value = state.a.value,
-        0x50 => state.d.value = state.b.value,
-        0x51 => state.d.value = state.c.value,
-        0x52 => state.d.value = state.d.value,
-        0x53 => state.d.value = state.e.value,
-        0x54 => state.d.value = state.h.value,
-        0x55 => state.d.value = state.l.value,
-        0x56 => state.d.value = state.memory.read_at( construct_address(state.h, state.l) ),
-        0x57 => state.d.value = state.a.value,
-        0x58 => state.e.value = state.b.value,
-        0x59 => state.e.value = state.c.value,
-        0x5a => state.e.value = state.d.value,
-        0x5b => state.e.value = state.e.value,
-        0x5c => state.e.value = state.h.value,
-        0x5d => state.e.value = state.l.value,
-        0x5e => state.e.value = state.memory.read_at( construct_address(state.h, state.l) ),
-        0x5f => state.e.value = state.a.value,
-        0x60 => state.h.value = state.b.value,
-        0x61 => state.h.value = state.c.value,
-        0x62 => state.h.value = state.d.value,
-        0x63 => state.h.value = state.e.value,
-        0x64 => state.h.value = state.h.value,
-        0x65 => state.h.value = state.l.value,
-        0x66 => state.h.value = state.memory.read_at( construct_address(state.h, state.l) ),
-        0x67 => state.h.value = state.a.value,
-        0x68 => state.l.value = state.b.value,
-        0x69 => state.l.value = state.c.value,
-        0x6a => state.l.value = state.d.value,
-        0x6b => state.l.value = state.e.value,
-        0x6c => state.l.value = state.h.value,
-        0x6d => state.l.value = state.l.value,
-        0x6e => state.l.value = state.memory.read_at( construct_address(state.h, state.l) ),
-        0x6f => state.l.value = state.a.value,
-        0x70 => state.memory.write_at(construct_address(state.h, state.l), state.b.value),
+        0x47 => cpu.b.value = cpu.a.value,
+        0x48 => cpu.c.value = cpu.b.value,
+        0x49 => cpu.c.value = cpu.c.value,
+        0x4a => cpu.c.value = cpu.d.value,
+        0x4b => cpu.c.value = cpu.e.value,
+        0x4c => cpu.c.value = cpu.h.value,
+        0x4d => cpu.c.value = cpu.l.value,
+        0x4e => cpu.c.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x4f => cpu.c.value = cpu.a.value,
+        0x50 => cpu.d.value = cpu.b.value,
+        0x51 => cpu.d.value = cpu.c.value,
+        0x52 => cpu.d.value = cpu.d.value,
+        0x53 => cpu.d.value = cpu.e.value,
+        0x54 => cpu.d.value = cpu.h.value,
+        0x55 => cpu.d.value = cpu.l.value,
+        0x56 => cpu.d.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x57 => cpu.d.value = cpu.a.value,
+        0x58 => cpu.e.value = cpu.b.value,
+        0x59 => cpu.e.value = cpu.c.value,
+        0x5a => cpu.e.value = cpu.d.value,
+        0x5b => cpu.e.value = cpu.e.value,
+        0x5c => cpu.e.value = cpu.h.value,
+        0x5d => cpu.e.value = cpu.l.value,
+        0x5e => cpu.e.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x5f => cpu.e.value = cpu.a.value,
+        0x60 => cpu.h.value = cpu.b.value,
+        0x61 => cpu.h.value = cpu.c.value,
+        0x62 => cpu.h.value = cpu.d.value,
+        0x63 => cpu.h.value = cpu.e.value,
+        0x64 => cpu.h.value = cpu.h.value,
+        0x65 => cpu.h.value = cpu.l.value,
+        0x66 => cpu.h.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x67 => cpu.h.value = cpu.a.value,
+        0x68 => cpu.l.value = cpu.b.value,
+        0x69 => cpu.l.value = cpu.c.value,
+        0x6a => cpu.l.value = cpu.d.value,
+        0x6b => cpu.l.value = cpu.e.value,
+        0x6c => cpu.l.value = cpu.h.value,
+        0x6d => cpu.l.value = cpu.l.value,
+        0x6e => cpu.l.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x6f => cpu.l.value = cpu.a.value,
+        0x70 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.b.value),
         // Move the value in B into memory at the HL address
-        0x71 => state.memory.write_at(construct_address(state.h, state.l), state.c.value),
-        0x72 => state.memory.write_at(construct_address(state.h, state.l), state.d.value),
-        0x73 => state.memory.write_at(construct_address(state.h, state.l), state.e.value),
-        0x74 => state.memory.write_at(construct_address(state.h, state.l), state.h.value),
-        0x75 => state.memory.write_at(construct_address(state.h, state.l), state.l.value),
+        0x71 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.c.value),
+        0x72 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.d.value),
+        0x73 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.e.value),
+        0x74 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.h.value),
+        0x75 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.l.value),
         0x76 => panic!("HALT"),
         // TODO: should halt panic? Need to figure out what halt does
-        0x77 => state.memory.write_at(construct_address(state.h, state.l), state.a.value),
-        0x78 => state.a.value = state.b.value,
-        0x79 => state.a.value = state.c.value,
-        0x7a => state.a.value = state.d.value,
-        0x7b => state.a.value = state.e.value,
-        0x7c => state.a.value = state.h.value,
-        0x7d => state.a.value = state.l.value,
-        0x7e => state.a.value = state.memory.read_at( construct_address(state.h, state.l) ),
-        0x7f => state.a.value = state.a.value,
+        0x77 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.a.value),
+        0x78 => cpu.a.value = cpu.b.value,
+        0x79 => cpu.a.value = cpu.c.value,
+        0x7a => cpu.a.value = cpu.d.value,
+        0x7b => cpu.a.value = cpu.e.value,
+        0x7c => cpu.a.value = cpu.h.value,
+        0x7d => cpu.a.value = cpu.l.value,
+        0x7e => cpu.a.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x7f => cpu.a.value = cpu.a.value,
 
         // ADD OPERATIONS
-        0x80 => state.a.value = add(state.a.value, state.b.value, &mut state.flags),
-        0x81 => state.a.value = add(state.a.value, state.c.value, &mut state.flags),
-        0x82 => state.a.value = add(state.a.value, state.d.value, &mut state.flags),
-        0x83 => state.a.value = add(state.a.value, state.e.value, &mut state.flags),
-        0x84 => state.a.value = add(state.a.value, state.h.value, &mut state.flags),
-        0x85 => state.a.value = add(state.a.value, state.l.value, &mut state.flags),
-        0x86 => state.a.value = add(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
-        0x87 => state.a.value = add(state.a.value, state.a.value, &mut state.flags),
+        0x80 => cpu.a.value = add(cpu.a.value, cpu.b.value, &mut cpu.flags),
+        0x81 => cpu.a.value = add(cpu.a.value, cpu.c.value, &mut cpu.flags),
+        0x82 => cpu.a.value = add(cpu.a.value, cpu.d.value, &mut cpu.flags),
+        0x83 => cpu.a.value = add(cpu.a.value, cpu.e.value, &mut cpu.flags),
+        0x84 => cpu.a.value = add(cpu.a.value, cpu.h.value, &mut cpu.flags),
+        0x85 => cpu.a.value = add(cpu.a.value, cpu.l.value, &mut cpu.flags),
+        0x86 => cpu.a.value = add(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x87 => cpu.a.value = add(cpu.a.value, cpu.a.value, &mut cpu.flags),
         // ADC
-        0x88 => state.a.value = adc(state.a.value, state.b.value, &mut state.flags),
-        0x89 => state.a.value = adc(state.a.value, state.c.value, &mut state.flags),
-        0x8a => state.a.value = adc(state.a.value, state.d.value, &mut state.flags),
-        0x8b => state.a.value = adc(state.a.value, state.e.value, &mut state.flags),
-        0x8c => state.a.value = adc(state.a.value, state.h.value, &mut state.flags),
-        0x8d => state.a.value = adc(state.a.value, state.l.value, &mut state.flags),
-        0x8e => state.a.value = adc(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
-        0x8f => state.a.value = adc(state.a.value, state.a.value, &mut state.flags),
+        0x88 => cpu.a.value = adc(cpu.a.value, cpu.b.value, &mut cpu.flags),
+        0x89 => cpu.a.value = adc(cpu.a.value, cpu.c.value, &mut cpu.flags),
+        0x8a => cpu.a.value = adc(cpu.a.value, cpu.d.value, &mut cpu.flags),
+        0x8b => cpu.a.value = adc(cpu.a.value, cpu.e.value, &mut cpu.flags),
+        0x8c => cpu.a.value = adc(cpu.a.value, cpu.h.value, &mut cpu.flags),
+        0x8d => cpu.a.value = adc(cpu.a.value, cpu.l.value, &mut cpu.flags),
+        0x8e => cpu.a.value = adc(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x8f => cpu.a.value = adc(cpu.a.value, cpu.a.value, &mut cpu.flags),
 
         // SUBTRACT OPERATIONS
-        0x90 => state.a.value = sub(state.a.value, state.b.value, &mut state.flags),
-        0x91 => state.a.value = sub(state.a.value, state.c.value, &mut state.flags),
-        0x92 => state.a.value = sub(state.a.value, state.d.value, &mut state.flags),
-        0x93 => state.a.value = sub(state.a.value, state.e.value, &mut state.flags),
-        0x94 => state.a.value = sub(state.a.value, state.h.value, &mut state.flags),
-        0x95 => state.a.value = sub(state.a.value, state.l.value, &mut state.flags),
-        0x96 => state.a.value = sub(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
-        0x97 => state.a.value = sub(state.a.value, state.a.value, &mut state.flags),
+        0x90 => cpu.a.value = sub(cpu.a.value, cpu.b.value, &mut cpu.flags),
+        0x91 => cpu.a.value = sub(cpu.a.value, cpu.c.value, &mut cpu.flags),
+        0x92 => cpu.a.value = sub(cpu.a.value, cpu.d.value, &mut cpu.flags),
+        0x93 => cpu.a.value = sub(cpu.a.value, cpu.e.value, &mut cpu.flags),
+        0x94 => cpu.a.value = sub(cpu.a.value, cpu.h.value, &mut cpu.flags),
+        0x95 => cpu.a.value = sub(cpu.a.value, cpu.l.value, &mut cpu.flags),
+        0x96 => cpu.a.value = sub(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x97 => cpu.a.value = sub(cpu.a.value, cpu.a.value, &mut cpu.flags),
         // SBB
-        0x98 => state.a.value = sbb(state.a.value, state.b.value, &mut state.flags),
-        0x99 => state.a.value = sbb(state.a.value, state.c.value, &mut state.flags),
-        0x9a => state.a.value = sbb(state.a.value, state.d.value, &mut state.flags),
-        0x9b => state.a.value = sbb(state.a.value, state.e.value, &mut state.flags),
-        0x9c => state.a.value = sbb(state.a.value, state.h.value, &mut state.flags),
-        0x9d => state.a.value = sbb(state.a.value, state.l.value, &mut state.flags),
-        0x9e => state.a.value = sbb(state.a.value, state.memory.read_at( construct_address(state.h, state.l) ), &mut state.flags),
-        0x9f => state.a.value = sbb(state.a.value, state.a.value, &mut state.flags),
+        0x98 => cpu.a.value = sbb(cpu.a.value, cpu.b.value, &mut cpu.flags),
+        0x99 => cpu.a.value = sbb(cpu.a.value, cpu.c.value, &mut cpu.flags),
+        0x9a => cpu.a.value = sbb(cpu.a.value, cpu.d.value, &mut cpu.flags),
+        0x9b => cpu.a.value = sbb(cpu.a.value, cpu.e.value, &mut cpu.flags),
+        0x9c => cpu.a.value = sbb(cpu.a.value, cpu.h.value, &mut cpu.flags),
+        0x9d => cpu.a.value = sbb(cpu.a.value, cpu.l.value, &mut cpu.flags),
+        0x9e => cpu.a.value = sbb(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x9f => cpu.a.value = sbb(cpu.a.value, cpu.a.value, &mut cpu.flags),
 
         0xa0 => panic!("Operation unimplemented"),
         0xa1 => panic!("Operation unimplemented"),
@@ -638,62 +638,62 @@ mod tests {
 
     #[test]
     fn test_operation_handling() {
-        let mut state: State = State::init();
+        let mut cpu: Cpu = Cpu::init();
 
         // MOV test C -> B
-        state.c.value = 0xd4;
-        handle_op_code(0x41, &mut state);
-        assert_eq!(state.b.value, 0xd4);
+        cpu.c.value = 0xd4;
+        handle_op_code(0x41, &mut cpu);
+        assert_eq!(cpu.b.value, 0xd4);
 
         // MOV test C -> M
-        state.h.value = 0x18;
-        state.l.value = 0xd4;
-        state.c.value = 0xff;
+        cpu.h.value = 0x18;
+        cpu.l.value = 0xd4;
+        cpu.c.value = 0xff;
 
-        handle_op_code(0x71, &mut state);
-        assert_eq!(state.memory.read_at(construct_address(state.h, state.l)), 0xff);
+        handle_op_code(0x71, &mut cpu);
+        assert_eq!(cpu.memory.read_at(construct_address(cpu.h, cpu.l)), 0xff);
 
         // MOV test M -> B
-        handle_op_code(0x46, &mut state);
-        assert_eq!(state.b.value, 0xff);
+        handle_op_code(0x46, &mut cpu);
+        assert_eq!(cpu.b.value, 0xff);
 
         // ADD test A + B -> A
-        state.a.value = 0xf0;
-        state.b.value = 0x0f;
+        cpu.a.value = 0xf0;
+        cpu.b.value = 0x0f;
 
-        handle_op_code(0x80, &mut state);
-        assert_eq!(state.a.value, 0xff);
+        handle_op_code(0x80, &mut cpu);
+        assert_eq!(cpu.a.value, 0xff);
 
         // ADC test A + M + CY -> A
         // Putting 0x02 in memory
-        state.h.value = 0x18;
-        state.l.value = 0xd4;
-        state.memory.write_at(0x18d4, 0x02);
+        cpu.h.value = 0x18;
+        cpu.l.value = 0xd4;
+        cpu.memory.write_at(0x18d4, 0x02);
 
-        state.flags.set_flag(Flag::CY);
-        state.a.value = 0x02;
+        cpu.flags.set_flag(Flag::CY);
+        cpu.a.value = 0x02;
 
-        handle_op_code(0x8e, &mut state);
-        assert_eq!(state.a.value, 0x05);
+        handle_op_code(0x8e, &mut cpu);
+        assert_eq!(cpu.a.value, 0x05);
         // A = 2, M = 2, CY = 1 ... = 5
 
         // SUB test A - M -> A
         // Putting 0xff into memory
-        state.h.value = 0x18;
-        state.l.value = 0xd4;
-        state.memory.write_at(0x18d4, 0xff);
+        cpu.h.value = 0x18;
+        cpu.l.value = 0xd4;
+        cpu.memory.write_at(0x18d4, 0xff);
 
-        state.a.value = 0xff;
+        cpu.a.value = 0xff;
 
-        handle_op_code(0x96, &mut state);
-        assert_eq!(state.a.value, 0x00);
+        handle_op_code(0x96, &mut cpu);
+        assert_eq!(cpu.a.value, 0x00);
 
         // SBB test A - C - CY -> A
-        state.a.value = 0x09;
-        state.c.value = 0x08;
-        state.flags.set_flag(Flag::CY);
+        cpu.a.value = 0x09;
+        cpu.c.value = 0x08;
+        cpu.flags.set_flag(Flag::CY);
 
-        handle_op_code(0x99, &mut state);
-        assert_eq!(state.a.value, 0x00);
+        handle_op_code(0x99, &mut cpu);
+        assert_eq!(cpu.a.value, 0x00);
     }
 }
