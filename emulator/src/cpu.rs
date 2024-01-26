@@ -2,6 +2,9 @@ use std::fs;
 
 // HARDWARE
 
+const STACK_MIN: u16 = 0x2001;
+// This should be where the minimum stack address is
+
 #[derive(Clone, Copy)]
 pub struct Register {
     value: u8,
@@ -180,6 +183,16 @@ impl Cpu {
             flags: Flags::default(),
         }
     }
+
+    pub fn check_stack_overflow(&self) -> bool {
+        // Checks if the stack has overflowed
+        // The stack grows growns downwards on the 8080
+        if self.sp.address < STACK_MIN {
+            println!("STACK OVERFLOW");
+            return true;
+        }
+        false
+    }
 }
 
 // OPERATIONS
@@ -190,6 +203,30 @@ fn construct_address(h: Register, l: Register) -> u16 {
     // TODO: Ensure HL is the correct order
 
     (h.value as u16) << 8 | l.value as u16
+}
+
+fn inx(reg_1: u8, reg_2: u8) -> (u8, u8) {
+    // Treats a pair of 8 bit registers as one 16 bit register and increments it
+    // Returns the byte to be stored in the 1st register and 2nd register respectively
+
+    let result: u32 = ( ((reg_1 as u32) << 8) | (reg_2 as u32) ) + 1;
+    // Using a u32 to avoid panic on overflow
+    let byte_1: u8 = (result >> 8) as u8;
+    let byte_2: u8 = (result & 0xff) as u8;
+
+    (byte_1, byte_2)
+}
+
+fn dcx(reg_1: u8, reg_2: u8) -> (u8, u8) {
+    // Treats a pair of 8 bit registers as one 16 bit register and decrements it
+    // Returns the byte to be stored in the 1st register and 2nd register respectively
+
+    let result: i32 = ( ((reg_1 as i32) << 8) | (reg_2 as i32) ) - 1;
+    // Using a i32 to avoid panic on overflow or underflow
+    let byte_1: u8 = (result >> 8) as u8;
+    let byte_2: u8 = (result & 0xff) as u8;
+
+    (byte_1, byte_2)
 }
 
 fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -259,7 +296,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         // NOP
         0x01 => panic!("Operation unimplemented"),
         0x02 => panic!("Operation unimplemented"),
-        0x03 => panic!("Operation unimplemented"),
+        0x03 => (cpu.b.value, cpu.c.value) = inx(cpu.b.value, cpu.c.value),
         0x04 => panic!("Operation unimplemented"),
         0x05 => panic!("Operation unimplemented"),
         0x06 => panic!("Operation unimplemented"),
@@ -267,7 +304,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x08 => panic!("Operation unimplemented"),
         0x09 => panic!("Operation unimplemented"),
         0x0a => panic!("Operation unimplemented"),
-        0x0b => panic!("Operation unimplemented"),
+        0x0b => (cpu.b.value, cpu.c.value) = dcx(cpu.b.value, cpu.c.value),
         0x0c => panic!("Operation unimplemented"),
         0x0d => panic!("Operation unimplemented"),
         0x0e => panic!("Operation unimplemented"),
@@ -275,7 +312,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x10 => panic!("Operation unimplemented"),
         0x11 => panic!("Operation unimplemented"),
         0x12 => panic!("Operation unimplemented"),
-        0x13 => panic!("Operation unimplemented"),
+        0x13 => (cpu.d.value, cpu.e.value) = inx(cpu.d.value, cpu.c.value),
         0x14 => panic!("Operation unimplemented"),
         0x15 => panic!("Operation unimplemented"),
         0x16 => panic!("Operation unimplemented"),
@@ -283,7 +320,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x18 => panic!("Operation unimplemented"),
         0x19 => panic!("Operation unimplemented"),
         0x1a => panic!("Operation unimplemented"),
-        0x1b => panic!("Operation unimplemented"),
+        0x1b => (cpu.d.value, cpu.e.value) = dcx(cpu.d.value, cpu.e.value),
         0x1c => panic!("Operation unimplemented"),
         0x1d => panic!("Operation unimplemented"),
         0x1e => panic!("Operation unimplemented"),
@@ -291,7 +328,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x20 => panic!("Operation unimplemented"),
         0x21 => panic!("Operation unimplemented"),
         0x22 => panic!("Operation unimplemented"),
-        0x23 => panic!("Operation unimplemented"),
+        0x23 => (cpu.h.value, cpu.l.value) = inx(cpu.h.value, cpu.l.value),
         0x24 => panic!("Operation unimplemented"),
         0x25 => panic!("Operation unimplemented"),
         0x26 => panic!("Operation unimplemented"),
@@ -299,7 +336,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x28 => panic!("Operation unimplemented"),
         0x29 => panic!("Operation unimplemented"),
         0x2a => panic!("Operation unimplemented"),
-        0x2b => panic!("Operation unimplemented"),
+        0x2b => (cpu.h.value, cpu.l.value) = dcx(cpu.h.value, cpu.l.value),
         0x2c => panic!("Operation unimplemented"),
         0x2d => panic!("Operation unimplemented"),
         0x2e => panic!("Operation unimplemented"),
@@ -307,7 +344,12 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x30 => panic!("Operation unimplemented"),
         0x31 => panic!("Operation unimplemented"),
         0x32 => panic!("Operation unimplemented"),
-        0x33 => panic!("Operation unimplemented"),
+        0x33 => {
+            let sp_1: u8 = ( cpu.sp.address >> 8 ) as u8;
+            let sp_2: u8 = ( cpu.sp.address & 0xff ) as u8;
+            let (byte_1, byte_2): (u8, u8) = inx(sp_1, sp_2);
+            cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
+        },
         0x34 => panic!("Operation unimplemented"),
         0x35 => panic!("Operation unimplemented"),
         0x36 => panic!("Operation unimplemented"),
@@ -315,7 +357,12 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x38 => panic!("Operation unimplemented"),
         0x39 => panic!("Operation unimplemented"),
         0x3a => panic!("Operation unimplemented"),
-        0x3b => panic!("Operation unimplemented"),
+        0x3b => {
+            let sp_1: u8 = ( cpu.sp.address >> 8 ) as u8;
+            let sp_2: u8 = ( cpu.sp.address & 0xff ) as u8;
+            let (byte_1, byte_2): (u8, u8) = dcx(sp_1, sp_2);
+            cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
+        },
         0x3c => panic!("Operation unimplemented"),
         0x3d => panic!("Operation unimplemented"),
         0x3e => panic!("Operation unimplemented"),
@@ -324,13 +371,11 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         // MOV OPERATIONS
         0x40 => cpu.b.value = cpu.b.value,
         0x41 => cpu.b.value = cpu.c.value,
-        // Moves the value in C into B
         0x42 => cpu.b.value = cpu.d.value,
         0x43 => cpu.b.value = cpu.e.value,
         0x44 => cpu.b.value = cpu.h.value,
         0x45 => cpu.b.value = cpu.l.value,
         0x46 => cpu.b.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
-        // Moves the value in memory at the HL address into register B
         0x47 => cpu.b.value = cpu.a.value,
         0x48 => cpu.c.value = cpu.b.value,
         0x49 => cpu.c.value = cpu.c.value,
@@ -373,7 +418,6 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x6e => cpu.l.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
         0x6f => cpu.l.value = cpu.a.value,
         0x70 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.b.value),
-        // Move the value in B into memory at the HL address
         0x71 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.c.value),
         0x72 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.d.value),
         0x73 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.e.value),
@@ -646,6 +690,14 @@ mod tests {
         assert_eq!(sbb(10, 9, &mut flags), 0);
         flags.set_flag(Flag::CY);
         assert_eq!(sbb(0, 0, &mut flags), 255);
+
+        // INX
+        assert_eq!(inx(2, 3), (2, 4));
+        assert_eq!(inx(0xff, 0xff), (0x00, 0x00));
+
+        // DCX
+        assert_eq!((dcx(0xff, 0xff)), (0xff, 0xfe));
+        assert_eq!((dcx(0x00, 0x00)), (0xff, 0xff));
     }
 
     #[test]
@@ -707,5 +759,15 @@ mod tests {
 
         handle_op_code(0x99, &mut cpu);
         assert_eq!(cpu.a.value, 0x00);
+
+        // INX test SP + 1
+        cpu.sp.address = 0xc3d4;
+        handle_op_code(0x33, &mut cpu);
+        assert_eq!(cpu.sp.address, 0xc3d5);
+
+        // DCX test SP - 1
+        cpu.sp.address = 0xc3d5;
+        handle_op_code(0x3b, &mut cpu);
+        assert_eq!(cpu.sp.address, 0xc3d4);
     }
 }
