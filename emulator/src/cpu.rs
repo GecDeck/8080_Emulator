@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, arch::x86_64::_mm256_add_pd};
 
 // HARDWARE
 
@@ -197,14 +197,6 @@ impl Cpu {
 
 // OPERATIONS
 
-fn construct_address(h: Register, l: Register) -> u16 {
-    // Creates an address from reading the value in H and L
-    //  If H is 18 and L is d4 return 18d4
-    // TODO: Ensure HL is the correct order
-
-    (h.value as u16) << 8 | l.value as u16
-}
-
 fn inx(reg_1: u8, reg_2: u8) -> (u8, u8) {
     // Treats a pair of 8 bit registers as one 16 bit register and increments it
     // Returns the byte to be stored in the 1st register and 2nd register respectively
@@ -229,10 +221,50 @@ fn dcx(reg_1: u8, reg_2: u8) -> (u8, u8) {
     (byte_1, byte_2)
 }
 
+fn inr(reg: u8, flags: &mut Flags) -> u8 {
+    // Increments an 8 bit register
+    // INR does not effect the carry flag
+
+    let carry: u8 = flags.check_flag(Flag::CY);
+    // Hold the status of the carry flag
+
+    let result: u8 = add(reg, 1, flags);
+    // Increment
+
+    match carry {
+        1 => flags.set_flag(Flag::CY),
+        0 => flags.clear_flag(Flag::CY),
+        _ => panic!("check_flag cannot return anything other then 0 or 1"),
+    }
+    // Resets the carry flag to what it was before since this operation should not effect it
+
+    result
+}
+
+fn dcr(reg: u8, flags: &mut Flags) -> u8 {
+    // Decrements an 8 bit register
+    // DCR does not effect the carry flag
+
+    let carry: u8 = flags.check_flag(Flag::CY);
+    // Hold status of carry flag
+
+    let result: u8 = sub(reg, 1, flags);
+    // Decrement
+
+    match carry {
+        1 => flags.set_flag(Flag::CY),
+        0 => flags.clear_flag(Flag::CY),
+        _ => panic!("check_flag cannot return anything other than 0 or 1"),
+    }
+    // Resets carry flag
+
+    result
+}
+
 fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // General add operation
 
-    let result = reg_1 as u16 + reg_2 as u16;
+    let result: u16 = reg_1 as u16 + reg_2 as u16;
     // Do math with i16 to capture carry and negatives without over or underflow
     set_flags_from_operation(result as i16, flags);
 
@@ -288,6 +320,14 @@ fn set_flags_from_operation(result: i16, flags: &mut Flags) {
 
 }
 
+fn construct_address(h: Register, l: Register) -> u16 {
+    // Creates an address from reading the value in H and L
+    //  If H is 18 and L is d4 return 18d4
+    // TODO: Ensure HL is the correct order
+
+    (h.value as u16) << 8 | l.value as u16
+}
+
 pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
     // Returns the number of additional bytes read for the operation
 
@@ -297,48 +337,48 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x01 => panic!("Operation unimplemented"),
         0x02 => panic!("Operation unimplemented"),
         0x03 => (cpu.b.value, cpu.c.value) = inx(cpu.b.value, cpu.c.value),
-        0x04 => panic!("Operation unimplemented"),
-        0x05 => panic!("Operation unimplemented"),
+        0x04 => cpu.b.value = inr(cpu.b.value, &mut cpu.flags),
+        0x05 => cpu.b.value = dcr(cpu.b.value, &mut cpu.flags),
         0x06 => panic!("Operation unimplemented"),
         0x07 => panic!("Operation unimplemented"),
         0x08 => panic!("Operation unimplemented"),
         0x09 => panic!("Operation unimplemented"),
         0x0a => panic!("Operation unimplemented"),
         0x0b => (cpu.b.value, cpu.c.value) = dcx(cpu.b.value, cpu.c.value),
-        0x0c => panic!("Operation unimplemented"),
-        0x0d => panic!("Operation unimplemented"),
+        0x0c => cpu.c.value = inr(cpu.c.value, &mut cpu.flags),
+        0x0d => cpu.c.value = dcr(cpu.c.value, &mut cpu.flags),
         0x0e => panic!("Operation unimplemented"),
         0x0f => panic!("Operation unimplemented"),
         0x10 => panic!("Operation unimplemented"),
         0x11 => panic!("Operation unimplemented"),
         0x12 => panic!("Operation unimplemented"),
         0x13 => (cpu.d.value, cpu.e.value) = inx(cpu.d.value, cpu.c.value),
-        0x14 => panic!("Operation unimplemented"),
-        0x15 => panic!("Operation unimplemented"),
+        0x14 => cpu.d.value = inr(cpu.d.value, &mut cpu.flags),
+        0x15 => cpu.d.value = dcr(cpu.d.value, &mut cpu.flags),
         0x16 => panic!("Operation unimplemented"),
         0x17 => panic!("Operation unimplemented"),
         0x18 => panic!("Operation unimplemented"),
         0x19 => panic!("Operation unimplemented"),
         0x1a => panic!("Operation unimplemented"),
         0x1b => (cpu.d.value, cpu.e.value) = dcx(cpu.d.value, cpu.e.value),
-        0x1c => panic!("Operation unimplemented"),
-        0x1d => panic!("Operation unimplemented"),
+        0x1c => cpu.e.value = inr(cpu.e.value, &mut cpu.flags),
+        0x1d => cpu.e.value = dcr(cpu.e.value, &mut cpu.flags),
         0x1e => panic!("Operation unimplemented"),
         0x1f => panic!("Operation unimplemented"),
         0x20 => panic!("Operation unimplemented"),
         0x21 => panic!("Operation unimplemented"),
         0x22 => panic!("Operation unimplemented"),
         0x23 => (cpu.h.value, cpu.l.value) = inx(cpu.h.value, cpu.l.value),
-        0x24 => panic!("Operation unimplemented"),
-        0x25 => panic!("Operation unimplemented"),
+        0x24 => cpu.h.value = inr(cpu.h.value, &mut cpu.flags),
+        0x25 => cpu.h.value = dcr(cpu.h.value, &mut cpu.flags),
         0x26 => panic!("Operation unimplemented"),
         0x27 => panic!("Operation unimplemented"),
         0x28 => panic!("Operation unimplemented"),
         0x29 => panic!("Operation unimplemented"),
         0x2a => panic!("Operation unimplemented"),
         0x2b => (cpu.h.value, cpu.l.value) = dcx(cpu.h.value, cpu.l.value),
-        0x2c => panic!("Operation unimplemented"),
-        0x2d => panic!("Operation unimplemented"),
+        0x2c => cpu.l.value = inr(cpu.l.value, &mut cpu.flags),
+        0x2d => cpu.l.value = dcr(cpu.l.value, &mut cpu.flags),
         0x2e => panic!("Operation unimplemented"),
         0x2f => panic!("Operation unimplemented"),
         0x30 => panic!("Operation unimplemented"),
@@ -350,8 +390,20 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             let (byte_1, byte_2): (u8, u8) = inx(sp_1, sp_2);
             cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
         },
-        0x34 => panic!("Operation unimplemented"),
-        0x35 => panic!("Operation unimplemented"),
+        0x34 => cpu.memory.write_at(
+            construct_address(cpu.h, cpu.l), 
+            inr(
+                cpu.memory.read_at(
+                    construct_address(cpu.h, cpu.l)),
+                    &mut cpu.flags)
+            ),
+        0x35 => cpu.memory.write_at(
+            construct_address(cpu.h, cpu.l), 
+            dcr(
+                cpu.memory.read_at(
+                    construct_address(cpu.h, cpu.l)),
+                    &mut cpu.flags)
+            ),
         0x36 => panic!("Operation unimplemented"),
         0x37 => panic!("Operation unimplemented"),
         0x38 => panic!("Operation unimplemented"),
@@ -363,8 +415,8 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             let (byte_1, byte_2): (u8, u8) = dcx(sp_1, sp_2);
             cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
         },
-        0x3c => panic!("Operation unimplemented"),
-        0x3d => panic!("Operation unimplemented"),
+        0x3c => cpu.a.value = inr(cpu.a.value, &mut cpu.flags),
+        0x3d => cpu.a.value = dcr(cpu.a.value, &mut cpu.flags),
         0x3e => panic!("Operation unimplemented"),
         0x3f => panic!("Operation unimplemented"),
 
@@ -698,6 +750,18 @@ mod tests {
         // DCX
         assert_eq!((dcx(0xff, 0xff)), (0xff, 0xfe));
         assert_eq!((dcx(0x00, 0x00)), (0xff, 0xff));
+
+        // INR
+        assert_eq!(inr(0x02, &mut flags), 0x03);
+        assert_eq!(flags.check_flag(Flag::P), 1);
+        assert_eq!(inr(0xff, &mut flags), 0x00);
+
+        // DCR
+        assert_eq!(dcr(0x01, &mut flags), 0x00);
+        assert_eq!(flags.check_flag(Flag::Z), 1);
+        assert_eq!(dcr(0x00, &mut flags), 0xff);
+        assert_eq!(flags.check_flag(Flag::S), 1);
+        assert_eq!(flags.check_flag(Flag::P), 1);
     }
 
     #[test]
@@ -769,5 +833,21 @@ mod tests {
         cpu.sp.address = 0xc3d5;
         handle_op_code(0x3b, &mut cpu);
         assert_eq!(cpu.sp.address, 0xc3d4);
+
+        // INR test M + 1
+        cpu.h.value = 0xc3;
+        cpu.l.value = 0xd4;
+        cpu.memory.write_at( construct_address(cpu.h, cpu.l), 0x00);
+
+        handle_op_code(0x34, &mut cpu);
+        assert_eq!(cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), 0x01);
+
+        // DCR M - 1
+        cpu.h.value = 0xc3;
+        cpu.l.value = 0xd4;
+        cpu.memory.write_at( construct_address(cpu.h, cpu.l), 0xff);
+
+        handle_op_code(0x35, &mut cpu);
+        assert_eq!(cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), 0xfe);
     }
 }
