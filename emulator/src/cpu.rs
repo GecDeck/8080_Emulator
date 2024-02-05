@@ -1,4 +1,4 @@
-use std::{fs, arch::x86_64::_mm256_add_pd};
+use std::fs;
 
 // HARDWARE
 
@@ -80,19 +80,18 @@ pub struct Flags {
     flags: u8,
 
     // The flags are in order:
-    // Z: set if the result is zero
-    // S: Set if the result is negative,
-    // P: Set if the number of 1 bits in the result is even
-    // CY: Set if addition resulted in a carry or subtraction in a borrow
-    // AC: Used for binary coded decimal arithmetic
-    // The last 3 bits should be unused
+    // S: Set if the result is negative, -- 1st bit
+    // Z: set if the result is zero -- 2nd bit
+    // AC: Used for binary coded decimal arithmetic -- 4th bit
+    // P: Set if the number of 1 bits in the result is even -- 6th bit
+    // CY: Set if addition resulted in a carry or subtraction in a borrow -- 8th bit
 }
 pub enum Flag {
-    Z,
     S,
+    Z,
+    AC,
     P,
     CY,
-    AC,
 }
 impl Flags {
     pub fn new() -> Self {
@@ -103,11 +102,11 @@ impl Flags {
 
     pub fn set_flag(&mut self, flag: Flag) {
         match flag {
-            Flag::Z => self.flags |= 0b10000000,
-            Flag::S => self.flags |= 0b01000000,
-            Flag::P => self.flags |= 0b00100000,
-            Flag::CY => self.flags |= 0b00010000,
-            Flag::AC => self.flags |= 0b00001000,
+            Flag::S => self.flags |= 0b10000000,
+            Flag::Z => self.flags |= 0b01000000,
+            Flag::AC => self.flags |= 0b00010000,
+            Flag::P => self.flags |= 0b00000100,
+            Flag::CY => self.flags |= 0b00000001,
         }
 
         assert_ne!(self.flags << 5, 0b11100000);
@@ -117,11 +116,11 @@ impl Flags {
 
     pub fn clear_flag(&mut self, flag: Flag) {
         match flag {
-            Flag::Z => self.flags &= 0b01111111,
-            Flag::S => self.flags &= 0b10111111,
-            Flag::P => self.flags &= 0b11011111,
-            Flag::CY => self.flags &= 0b11101111,
-            Flag::AC => self.flags &= 0b11110111,
+            Flag::S => self.flags &= 0b01111111,
+            Flag::Z => self.flags &= 0b10111111,
+            Flag::AC => self.flags &= 0b11101111,
+            Flag::P => self.flags &= 0b11111011,
+            Flag::CY => self.flags &= 0b11111110,
         }
 
         assert_ne!(self.flags << 5, 0b11100000);
@@ -129,15 +128,15 @@ impl Flags {
 
     pub fn check_flag(&mut self, flag: Flag) -> u8 {
         match flag {
-            Flag::Z => if self.flags & 0b10000000 == 0b10000000 { 1 }
+            Flag::S => if self.flags & 0b10000000 == 0b10000000 { 1 }
             else { 0 },
-            Flag::S => if self.flags & 0b01000000 == 0b01000000 { 1 }
+            Flag::Z => if self.flags & 0b01000000 == 0b01000000 { 1 }
             else { 0 },
-            Flag::P => if self.flags & 0b00100000 == 0b00100000 { 1 }
+            Flag::AC => if self.flags & 0b00010000 == 0b00010000 { 1 }
             else { 0 },
-            Flag::CY => if self.flags & 0b00010000 == 0b00010000 { 1 }
+            Flag::P => if self.flags & 0b00000100 == 0b00000100 { 1 }
             else { 0 },
-            Flag::AC => if self.flags & 0b00001000 == 0b00001000 { 1 }
+            Flag::CY => if self.flags & 0b00000001 == 0b00000001 { 1 }
             else { 0 },
         }
     }
@@ -197,28 +196,24 @@ impl Cpu {
 
 // OPERATIONS
 
-fn inx(reg_1: u8, reg_2: u8) -> (u8, u8) {
+fn inx(reg_pair: u16) -> (u8, u8) {
     // Treats a pair of 8 bit registers as one 16 bit register and increments it
     // Returns the byte to be stored in the 1st register and 2nd register respectively
 
-    let result: u32 = ( ((reg_1 as u32) << 8) | (reg_2 as u32) ) + 1;
+    let result: u32 = reg_pair as u32 + 1;
     // Using a u32 to avoid panic on overflow
-    let byte_1: u8 = (result >> 8) as u8;
-    let byte_2: u8 = (result & 0xff) as u8;
 
-    (byte_1, byte_2)
+    split_registers(result as u16)
 }
 
-fn dcx(reg_1: u8, reg_2: u8) -> (u8, u8) {
+fn dcx(reg_pair: u16) -> (u8, u8) {
     // Treats a pair of 8 bit registers as one 16 bit register and decrements it
     // Returns the byte to be stored in the 1st register and 2nd register respectively
 
-    let result: i32 = ( ((reg_1 as i32) << 8) | (reg_2 as i32) ) - 1;
+    let result: i32 = reg_pair as i32 - 1;
     // Using a i32 to avoid panic on overflow or underflow
-    let byte_1: u8 = (result >> 8) as u8;
-    let byte_2: u8 = (result & 0xff) as u8;
 
-    (byte_1, byte_2)
+    split_registers((result & 0xffff) as u16)
 }
 
 fn inr(reg: u8, flags: &mut Flags) -> u8 {
@@ -261,15 +256,29 @@ fn dcr(reg: u8, flags: &mut Flags) -> u8 {
     result
 }
 
+fn dad(hl_pair: u16, reg_pair: u16, flags: &mut Flags) -> (u8, u8) {
+    // Adds the value in register pair to the register pair HL
+    // This operation only affects the carry flag
+
+    let result: u32 = hl_pair as u32 + reg_pair as u32;
+    // u32 to catch carry
+
+    if result > u16::MAX as u32 { flags.set_flag(Flag::CY) }
+    else { flags.clear_flag(Flag::CY) }
+    // Setting carry flag
+    // TODO: find a way to call set_flags_from_operation here
+
+    split_registers(result as u16)
+}
+
 fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // General add operation
 
     let result: u16 = reg_1 as u16 + reg_2 as u16;
     // Do math with i16 to capture carry and negatives without over or underflow
-    set_flags_from_operation(result as i16, flags);
+    *flags = set_flags_from_operation(result as i16, *flags);
 
-    (result & 0xff) as u8
-    // & 0xff discards anything outside of 8 bits
+    result as u8
 }
 
 fn adc(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -278,16 +287,20 @@ fn adc(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     let carry: u8 = flags.check_flag(Flag::CY);
     let result: u16 = add(reg_1, reg_2, flags) as u16 + carry as u16;
 
-    (result & 0xff) as u8
+    result as u8
 }
 
 fn sub(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // Basic subtraction operation
 
     let result = reg_1 as i16 - reg_2 as i16;
-    set_flags_from_operation(result, flags);
+    *flags = set_flags_from_operation(result, *flags);
 
-    (result & 0xff).unsigned_abs() as u8
+    (result & 0xff) as u8
+    // Rust casting will cast i16 to a u16 first then to a u8
+    //  This means -1 would become 1, but we want it to be 255
+    //  So we and result with 0xff to skip straight to casting to a u8
+    //  as u8 SHOULD then effectively do nothing to the actual value of result
 }
 
 fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -296,36 +309,47 @@ fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     let carry: u8 = flags.check_flag(Flag::CY);
     let result: i16 = sub(reg_1, reg_2, flags) as i16 - carry as i16;
 
-    (result & 0xff).unsigned_abs() as u8
+    (result & 0xff) as u8
 }
 
-fn set_flags_from_operation(result: i16, flags: &mut Flags) {
+fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     // Sets flags based on the result of an arithmetic operation
+    let mut return_flags: Flags = flags;
 
     // Zero check
-    if result == 0 { flags.set_flag(Flag::Z) }
-    else { flags.clear_flag(Flag::Z) }
+    if result == 0 { return_flags.set_flag(Flag::Z) }
+    else { return_flags.clear_flag(Flag::Z) }
 
     // Negative Check
-    if result < 0 { flags.set_flag(Flag::S) }
-    else { flags.clear_flag(Flag::S) }
+    if result < 0 { return_flags.set_flag(Flag::S) }
+    else { return_flags.clear_flag(Flag::S) }
 
     // Parity Check
-    if ((result & 0xff) as u8).count_ones() % 2 == 0 { flags.set_flag(Flag::P) }
-    else { flags.clear_flag(Flag::P) }
+    if ((result & 0xff) as u8).count_ones() % 2 == 0 { return_flags.set_flag(Flag::P) }
+    else { return_flags.clear_flag(Flag::P) }
 
     // Carry Check
-    if result > u8::MAX as i16 { flags.set_flag(Flag::CY) }
-    else { flags.clear_flag(Flag::CY) }
+    if result > u8::MAX as i16 { return_flags.set_flag(Flag::CY) }
+    else { return_flags.clear_flag(Flag::CY) }
 
+    return_flags
 }
 
-fn construct_address(h: Register, l: Register) -> u16 {
+fn pair_registers(reg_1: u8, reg_2: u8) -> u16 {
     // Creates an address from reading the value in H and L
     //  If H is 18 and L is d4 return 18d4
     // TODO: Ensure HL is the correct order
 
-    (h.value as u16) << 8 | l.value as u16
+    (reg_1 as u16) << 8 | reg_2 as u16
+}
+
+fn split_registers(reg_pair: u16) -> (u8, u8) {
+    // Splits a u16 register pair into a tuple of u8s
+
+    let byte_1: u8 = (reg_pair >> 8) as u8;
+    let byte_2: u8 = (reg_pair & 0xff) as u8;
+
+    (byte_1, byte_2)
 }
 
 pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
@@ -336,15 +360,19 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         // NOP
         0x01 => panic!("Operation unimplemented"),
         0x02 => panic!("Operation unimplemented"),
-        0x03 => (cpu.b.value, cpu.c.value) = inx(cpu.b.value, cpu.c.value),
+        0x03 => (cpu.b.value, cpu.c.value) = inx( pair_registers(cpu.b.value, cpu.c.value) ),
         0x04 => cpu.b.value = inr(cpu.b.value, &mut cpu.flags),
         0x05 => cpu.b.value = dcr(cpu.b.value, &mut cpu.flags),
         0x06 => panic!("Operation unimplemented"),
         0x07 => panic!("Operation unimplemented"),
         0x08 => panic!("Operation unimplemented"),
-        0x09 => panic!("Operation unimplemented"),
+        0x09 => (cpu.h.value, cpu.l.value) = dad(
+            pair_registers(cpu.h.value, cpu.l.value),
+            pair_registers(cpu.b.value, cpu.c.value),
+            &mut cpu.flags
+            ),
         0x0a => panic!("Operation unimplemented"),
-        0x0b => (cpu.b.value, cpu.c.value) = dcx(cpu.b.value, cpu.c.value),
+        0x0b => (cpu.b.value, cpu.c.value) = dcx( pair_registers(cpu.b.value, cpu.c.value) ),
         0x0c => cpu.c.value = inr(cpu.c.value, &mut cpu.flags),
         0x0d => cpu.c.value = dcr(cpu.c.value, &mut cpu.flags),
         0x0e => panic!("Operation unimplemented"),
@@ -352,15 +380,19 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x10 => panic!("Operation unimplemented"),
         0x11 => panic!("Operation unimplemented"),
         0x12 => panic!("Operation unimplemented"),
-        0x13 => (cpu.d.value, cpu.e.value) = inx(cpu.d.value, cpu.c.value),
+        0x13 => (cpu.d.value, cpu.e.value) = inx( pair_registers(cpu.d.value, cpu.c.value) ),
         0x14 => cpu.d.value = inr(cpu.d.value, &mut cpu.flags),
         0x15 => cpu.d.value = dcr(cpu.d.value, &mut cpu.flags),
         0x16 => panic!("Operation unimplemented"),
         0x17 => panic!("Operation unimplemented"),
         0x18 => panic!("Operation unimplemented"),
-        0x19 => panic!("Operation unimplemented"),
+        0x19 => (cpu.h.value, cpu.l.value) = dad(
+            pair_registers(cpu.d.value, cpu.e.value),
+            pair_registers(cpu.d.value, cpu.e.value),
+            &mut cpu.flags
+            ),
         0x1a => panic!("Operation unimplemented"),
-        0x1b => (cpu.d.value, cpu.e.value) = dcx(cpu.d.value, cpu.e.value),
+        0x1b => (cpu.d.value, cpu.e.value) = dcx( pair_registers(cpu.d.value, cpu.e.value) ),
         0x1c => cpu.e.value = inr(cpu.e.value, &mut cpu.flags),
         0x1d => cpu.e.value = dcr(cpu.e.value, &mut cpu.flags),
         0x1e => panic!("Operation unimplemented"),
@@ -368,15 +400,22 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x20 => panic!("Operation unimplemented"),
         0x21 => panic!("Operation unimplemented"),
         0x22 => panic!("Operation unimplemented"),
-        0x23 => (cpu.h.value, cpu.l.value) = inx(cpu.h.value, cpu.l.value),
+        0x23 => (cpu.h.value, cpu.l.value) = inx( pair_registers(cpu.h.value, cpu.l.value) ),
         0x24 => cpu.h.value = inr(cpu.h.value, &mut cpu.flags),
         0x25 => cpu.h.value = dcr(cpu.h.value, &mut cpu.flags),
         0x26 => panic!("Operation unimplemented"),
         0x27 => panic!("Operation unimplemented"),
         0x28 => panic!("Operation unimplemented"),
-        0x29 => panic!("Operation unimplemented"),
+        0x29 => (cpu.h.value, cpu.l.value) = dad(
+            pair_registers(cpu.h.value, cpu.l.value),
+            pair_registers(cpu.h.value, cpu.l.value),
+            &mut cpu.flags
+            ),
+        // This is documented as HL = HL + HI
+        //  But I think it's supposed to just add HL to itself? I don't what what I means
+        //  TODO: find out what I means
         0x2a => panic!("Operation unimplemented"),
-        0x2b => (cpu.h.value, cpu.l.value) = dcx(cpu.h.value, cpu.l.value),
+        0x2b => (cpu.h.value, cpu.l.value) = dcx( pair_registers(cpu.h.value, cpu.l.value) ),
         0x2c => cpu.l.value = inr(cpu.l.value, &mut cpu.flags),
         0x2d => cpu.l.value = dcr(cpu.l.value, &mut cpu.flags),
         0x2e => panic!("Operation unimplemented"),
@@ -387,32 +426,36 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x33 => {
             let sp_1: u8 = ( cpu.sp.address >> 8 ) as u8;
             let sp_2: u8 = ( cpu.sp.address & 0xff ) as u8;
-            let (byte_1, byte_2): (u8, u8) = inx(sp_1, sp_2);
+            let (byte_1, byte_2): (u8, u8) = inx( pair_registers(sp_1, sp_2) );
             cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
         },
         0x34 => cpu.memory.write_at(
-            construct_address(cpu.h, cpu.l), 
+            pair_registers(cpu.h.value, cpu.l.value), 
             inr(
                 cpu.memory.read_at(
-                    construct_address(cpu.h, cpu.l)),
+                    pair_registers(cpu.h.value, cpu.l.value)),
                     &mut cpu.flags)
             ),
         0x35 => cpu.memory.write_at(
-            construct_address(cpu.h, cpu.l), 
+            pair_registers(cpu.h.value, cpu.l.value), 
             dcr(
                 cpu.memory.read_at(
-                    construct_address(cpu.h, cpu.l)),
+                    pair_registers(cpu.h.value, cpu.l.value)),
                     &mut cpu.flags)
             ),
         0x36 => panic!("Operation unimplemented"),
         0x37 => panic!("Operation unimplemented"),
         0x38 => panic!("Operation unimplemented"),
-        0x39 => panic!("Operation unimplemented"),
+        0x39 => (cpu.h.value, cpu.l.value) = dad(
+            pair_registers(cpu.h.value, cpu.l.value),
+            cpu.sp.address,
+            &mut cpu.flags
+            ),
         0x3a => panic!("Operation unimplemented"),
         0x3b => {
             let sp_1: u8 = ( cpu.sp.address >> 8 ) as u8;
             let sp_2: u8 = ( cpu.sp.address & 0xff ) as u8;
-            let (byte_1, byte_2): (u8, u8) = dcx(sp_1, sp_2);
+            let (byte_1, byte_2): (u8, u8) = dcx( pair_registers(sp_1, sp_2) );
             cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
         },
         0x3c => cpu.a.value = inr(cpu.a.value, &mut cpu.flags),
@@ -427,7 +470,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x43 => cpu.b.value = cpu.e.value,
         0x44 => cpu.b.value = cpu.h.value,
         0x45 => cpu.b.value = cpu.l.value,
-        0x46 => cpu.b.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x46 => cpu.b.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x47 => cpu.b.value = cpu.a.value,
         0x48 => cpu.c.value = cpu.b.value,
         0x49 => cpu.c.value = cpu.c.value,
@@ -435,7 +478,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x4b => cpu.c.value = cpu.e.value,
         0x4c => cpu.c.value = cpu.h.value,
         0x4d => cpu.c.value = cpu.l.value,
-        0x4e => cpu.c.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x4e => cpu.c.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x4f => cpu.c.value = cpu.a.value,
         0x50 => cpu.d.value = cpu.b.value,
         0x51 => cpu.d.value = cpu.c.value,
@@ -443,7 +486,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x53 => cpu.d.value = cpu.e.value,
         0x54 => cpu.d.value = cpu.h.value,
         0x55 => cpu.d.value = cpu.l.value,
-        0x56 => cpu.d.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x56 => cpu.d.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x57 => cpu.d.value = cpu.a.value,
         0x58 => cpu.e.value = cpu.b.value,
         0x59 => cpu.e.value = cpu.c.value,
@@ -451,7 +494,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x5b => cpu.e.value = cpu.e.value,
         0x5c => cpu.e.value = cpu.h.value,
         0x5d => cpu.e.value = cpu.l.value,
-        0x5e => cpu.e.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x5e => cpu.e.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x5f => cpu.e.value = cpu.a.value,
         0x60 => cpu.h.value = cpu.b.value,
         0x61 => cpu.h.value = cpu.c.value,
@@ -459,7 +502,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x63 => cpu.h.value = cpu.e.value,
         0x64 => cpu.h.value = cpu.h.value,
         0x65 => cpu.h.value = cpu.l.value,
-        0x66 => cpu.h.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x66 => cpu.h.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x67 => cpu.h.value = cpu.a.value,
         0x68 => cpu.l.value = cpu.b.value,
         0x69 => cpu.l.value = cpu.c.value,
@@ -467,24 +510,24 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x6b => cpu.l.value = cpu.e.value,
         0x6c => cpu.l.value = cpu.h.value,
         0x6d => cpu.l.value = cpu.l.value,
-        0x6e => cpu.l.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x6e => cpu.l.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x6f => cpu.l.value = cpu.a.value,
-        0x70 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.b.value),
-        0x71 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.c.value),
-        0x72 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.d.value),
-        0x73 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.e.value),
-        0x74 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.h.value),
-        0x75 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.l.value),
+        0x70 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.b.value),
+        0x71 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.c.value),
+        0x72 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.d.value),
+        0x73 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.e.value),
+        0x74 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.h.value),
+        0x75 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.l.value),
         0x76 => panic!("HALT"),
         // TODO: should halt panic? Need to figure out what halt does
-        0x77 => cpu.memory.write_at(construct_address(cpu.h, cpu.l), cpu.a.value),
+        0x77 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.a.value),
         0x78 => cpu.a.value = cpu.b.value,
         0x79 => cpu.a.value = cpu.c.value,
         0x7a => cpu.a.value = cpu.d.value,
         0x7b => cpu.a.value = cpu.e.value,
         0x7c => cpu.a.value = cpu.h.value,
         0x7d => cpu.a.value = cpu.l.value,
-        0x7e => cpu.a.value = cpu.memory.read_at( construct_address(cpu.h, cpu.l) ),
+        0x7e => cpu.a.value = cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ),
         0x7f => cpu.a.value = cpu.a.value,
 
         // ADD OPERATIONS
@@ -494,7 +537,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x83 => cpu.a.value = add(cpu.a.value, cpu.e.value, &mut cpu.flags),
         0x84 => cpu.a.value = add(cpu.a.value, cpu.h.value, &mut cpu.flags),
         0x85 => cpu.a.value = add(cpu.a.value, cpu.l.value, &mut cpu.flags),
-        0x86 => cpu.a.value = add(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x86 => cpu.a.value = add(cpu.a.value, cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), &mut cpu.flags),
         0x87 => cpu.a.value = add(cpu.a.value, cpu.a.value, &mut cpu.flags),
         // ADC
         0x88 => cpu.a.value = adc(cpu.a.value, cpu.b.value, &mut cpu.flags),
@@ -503,7 +546,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x8b => cpu.a.value = adc(cpu.a.value, cpu.e.value, &mut cpu.flags),
         0x8c => cpu.a.value = adc(cpu.a.value, cpu.h.value, &mut cpu.flags),
         0x8d => cpu.a.value = adc(cpu.a.value, cpu.l.value, &mut cpu.flags),
-        0x8e => cpu.a.value = adc(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x8e => cpu.a.value = adc(cpu.a.value, cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), &mut cpu.flags),
         0x8f => cpu.a.value = adc(cpu.a.value, cpu.a.value, &mut cpu.flags),
 
         // SUBTRACT OPERATIONS
@@ -513,7 +556,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x93 => cpu.a.value = sub(cpu.a.value, cpu.e.value, &mut cpu.flags),
         0x94 => cpu.a.value = sub(cpu.a.value, cpu.h.value, &mut cpu.flags),
         0x95 => cpu.a.value = sub(cpu.a.value, cpu.l.value, &mut cpu.flags),
-        0x96 => cpu.a.value = sub(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x96 => cpu.a.value = sub(cpu.a.value, cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), &mut cpu.flags),
         0x97 => cpu.a.value = sub(cpu.a.value, cpu.a.value, &mut cpu.flags),
         // SBB
         0x98 => cpu.a.value = sbb(cpu.a.value, cpu.b.value, &mut cpu.flags),
@@ -522,7 +565,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x9b => cpu.a.value = sbb(cpu.a.value, cpu.e.value, &mut cpu.flags),
         0x9c => cpu.a.value = sbb(cpu.a.value, cpu.h.value, &mut cpu.flags),
         0x9d => cpu.a.value = sbb(cpu.a.value, cpu.l.value, &mut cpu.flags),
-        0x9e => cpu.a.value = sbb(cpu.a.value, cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), &mut cpu.flags),
+        0x9e => cpu.a.value = sbb(cpu.a.value, cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), &mut cpu.flags),
         0x9f => cpu.a.value = sbb(cpu.a.value, cpu.a.value, &mut cpu.flags),
 
         0xa0 => panic!("Operation unimplemented"),
@@ -661,26 +704,26 @@ mod tests {
         let mut flags: Flags = Flags::default();
 
         flags.set_flag(Flag::Z);
-        assert_eq!(flags.flags, 0b10000000);
+        assert_eq!(flags.flags, 0b01000000);
         assert_eq!(flags.check_flag(Flag::Z), 1);
         flags.clear_flag(Flag::Z);
         assert!(flags.flags == 0x00);
 
         flags.set_flag(Flag::S);
-        assert_eq!(flags.flags, 0b01000000);
+        assert_eq!(flags.flags, 0b10000000);
         flags.clear_flag(Flag::S);
         assert!(flags.flags == 0x00);
 
         flags.set_flag(Flag::P);
-        assert_eq!(flags.flags, 0b00100000);
+        assert_eq!(flags.flags, 0b00000100);
         flags.clear_flags();
 
         flags.set_flag(Flag::CY);
-        assert_eq!(flags.flags, 0b00010000);
+        assert_eq!(flags.flags, 0b00000001);
         flags.clear_flags();
 
         flags.set_flag(Flag::AC);
-        assert_eq!(flags.flags, 0b00001000);
+        assert_eq!(flags.flags, 0b00010000);
         flags.clear_flags();
     }
 
@@ -688,7 +731,7 @@ mod tests {
     fn test_hl_address() {
         let h: Register = Register { value: 0x18, };
         let l: Register = Register { value: 0xd4, };
-        assert_eq!(construct_address(h, l), 0x18d4);
+        assert_eq!(pair_registers(h.value, l.value), 0x18d4);
     }
 
     #[test]
@@ -696,27 +739,27 @@ mod tests {
         let mut flags: Flags = Flags::default();
 
         // No flags
-        set_flags_from_operation(2, &mut flags);
+        flags = set_flags_from_operation(2, flags);
         assert_eq!(flags.flags, 0x00);
 
         // Z flag setting
-        set_flags_from_operation(0, &mut flags);
-        assert_eq!(flags.flags, 0b10100000);
+        flags = set_flags_from_operation(0, flags);
+        assert_eq!(flags.flags, 0b01000100);
         // Zero has even 1 parity
 
         // S flag setting
-        set_flags_from_operation(-2, &mut flags);
-        assert_eq!(flags.flags, 0b01000000);
+        flags = set_flags_from_operation(-2, flags);
+        assert_eq!(flags.flags, 0b10000000);
 
         // Parity flag setting
-        set_flags_from_operation(3, &mut flags);
-        assert_eq!(flags.flags, 0b00100000);
-        set_flags_from_operation(2, &mut flags);
+        flags = set_flags_from_operation(3, flags);
+        assert_eq!(flags.flags, 0b00000100);
+        flags = set_flags_from_operation(2, flags);
         assert_eq!(flags.flags, 0b00000000);
 
         // Carry test
-        set_flags_from_operation(258, &mut flags);
-        assert_eq!(flags.flags, 0b00010000);
+        flags = set_flags_from_operation(258, flags);
+        assert_eq!(flags.flags, 0b00000001);
     }
 
     #[test]
@@ -744,12 +787,12 @@ mod tests {
         assert_eq!(sbb(0, 0, &mut flags), 255);
 
         // INX
-        assert_eq!(inx(2, 3), (2, 4));
-        assert_eq!(inx(0xff, 0xff), (0x00, 0x00));
+        assert_eq!(inx( pair_registers(2, 3) ), (2, 4));
+        assert_eq!(inx( pair_registers(0xff, 0xff) ), (0x00, 0x00));
 
         // DCX
-        assert_eq!((dcx(0xff, 0xff)), (0xff, 0xfe));
-        assert_eq!((dcx(0x00, 0x00)), (0xff, 0xff));
+        assert_eq!((dcx( pair_registers(0xff, 0xff)) ), (0xff, 0xfe));
+        assert_eq!((dcx( pair_registers(0x00, 0x00)) ), (0xff, 0xff));
 
         // INR
         assert_eq!(inr(0x02, &mut flags), 0x03);
@@ -757,11 +800,21 @@ mod tests {
         assert_eq!(inr(0xff, &mut flags), 0x00);
 
         // DCR
+        flags.clear_flags();
         assert_eq!(dcr(0x01, &mut flags), 0x00);
         assert_eq!(flags.check_flag(Flag::Z), 1);
         assert_eq!(dcr(0x00, &mut flags), 0xff);
         assert_eq!(flags.check_flag(Flag::S), 1);
         assert_eq!(flags.check_flag(Flag::P), 1);
+
+        // DAD
+        flags.clear_flags();
+        assert_eq!(dad(0xffff, 0x0001, &mut flags), (0x00, 0x00));
+        assert_eq!(flags.check_flag(Flag::CY), 1);
+        assert_eq!(dad(0x0002, 0x0001, &mut flags), (0x00, 0x03));
+        assert_eq!(flags.check_flag(Flag::CY), 0);
+        assert_eq!(flags.check_flag(Flag::P), 0);
+        // This should never affect any flag other than the carry flag
     }
 
     #[test]
@@ -779,7 +832,7 @@ mod tests {
         cpu.c.value = 0xff;
 
         handle_op_code(0x71, &mut cpu);
-        assert_eq!(cpu.memory.read_at(construct_address(cpu.h, cpu.l)), 0xff);
+        assert_eq!(cpu.memory.read_at(pair_registers(cpu.h.value, cpu.l.value)), 0xff);
 
         // MOV test M -> B
         handle_op_code(0x46, &mut cpu);
@@ -837,17 +890,25 @@ mod tests {
         // INR test M + 1
         cpu.h.value = 0xc3;
         cpu.l.value = 0xd4;
-        cpu.memory.write_at( construct_address(cpu.h, cpu.l), 0x00);
+        cpu.memory.write_at( pair_registers(cpu.h.value, cpu.l.value), 0x00);
 
         handle_op_code(0x34, &mut cpu);
-        assert_eq!(cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), 0x01);
+        assert_eq!(cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), 0x01);
 
         // DCR M - 1
         cpu.h.value = 0xc3;
         cpu.l.value = 0xd4;
-        cpu.memory.write_at( construct_address(cpu.h, cpu.l), 0xff);
+        cpu.memory.write_at( pair_registers(cpu.h.value, cpu.l.value), 0xff);
 
         handle_op_code(0x35, &mut cpu);
-        assert_eq!(cpu.memory.read_at( construct_address(cpu.h, cpu.l) ), 0xfe);
+        assert_eq!(cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), 0xfe);
+
+        // DAD HL + SP -> HL
+        cpu.h.value = 0x01;
+        cpu.l.value = 0x01;
+        cpu.sp.address = 0x0101;
+
+        handle_op_code(0x39, &mut cpu);
+        assert_eq!((cpu.h.value, cpu.l.value), (0x02, 0x02));
     }
 }
