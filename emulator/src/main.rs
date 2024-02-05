@@ -20,6 +20,9 @@ fn main() {
     loop {
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
         cpu.pc.address += 1;
+        // Important to remember pc address is incremented before op code is handled
+        //  when handling operations that read additional bytes, the first byte to be read will be
+        //  at the pc address NOT pc address + 1
 
         let additional_bytes: u16 = cpu::handle_op_code(op_code, &mut cpu);
         cpu.pc.address += additional_bytes;

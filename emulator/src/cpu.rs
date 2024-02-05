@@ -621,7 +621,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xc1 => panic!("Operation unimplemented"),
         0xc2 => { // JNZ
             let jmp_address: Option<u16> = jmp(
-                (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address + 2)),
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
                 Some(cpu.flags.check_flag(Flag::Z) == 0)
                 );
             match jmp_address {
@@ -631,7 +631,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         },
         0xc3 => { // JMP
             let jmp_address: Option<u16> = jmp(
-                (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address + 2)),
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
                 None
                 );
             cpu.pc.address = jmp_address.expect("jmp with no condition should always return Some(address)");
@@ -645,7 +645,16 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xc7 => panic!("Operation unimplemented"),
         0xc8 => panic!("Operation unimplemented"),
         0xc9 => panic!("Operation unimplemented"),
-        0xca => panic!("Operation unimplemented"),
+        0xca => { // JZ
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::Z) == 1)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xcb => panic!("Operation unimplemented"),
         0xcc => panic!("Operation unimplemented"),
         0xcd => panic!("Operation unimplemented"),
@@ -656,7 +665,16 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xcf => panic!("Operation unimplemented"),
         0xd0 => panic!("Operation unimplemented"),
         0xd1 => panic!("Operation unimplemented"),
-        0xd2 => panic!("Operation unimplemented"),
+        0xd2 => { // JNC
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::CY) == 0)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xd3 => panic!("Operation unimplemented"),
         0xd4 => panic!("Operation unimplemented"),
         0xd5 => panic!("Operation unimplemented"),
@@ -667,7 +685,16 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xd7 => panic!("Operation unimplemented"),
         0xd8 => panic!("Operation unimplemented"),
         0xd9 => panic!("Operation unimplemented"),
-        0xda => panic!("Operation unimplemented"),
+        0xda => { // JC
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::CY) == 1)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xdb => panic!("Operation unimplemented"),
         0xdc => panic!("Operation unimplemented"),
         0xdd => panic!("Operation unimplemented"),
@@ -678,7 +705,16 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xdf => panic!("Operation unimplemented"),
         0xe0 => panic!("Operation unimplemented"),
         0xe1 => panic!("Operation unimplemented"),
-        0xe2 => panic!("Operation unimplemented"),
+        0xe2 => { // JPO
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::P) == 0)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xe3 => panic!("Operation unimplemented"),
         0xe4 => panic!("Operation unimplemented"),
         0xe5 => panic!("Operation unimplemented"),
@@ -686,7 +722,16 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xe7 => panic!("Operation unimplemented"),
         0xe8 => panic!("Operation unimplemented"),
         0xe9 => panic!("Operation unimplemented"),
-        0xea => panic!("Operation unimplemented"),
+        0xea => { // JPE
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::P) == 1)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xeb => panic!("Operation unimplemented"),
         0xec => panic!("Operation unimplemented"),
         0xed => panic!("Operation unimplemented"),
@@ -694,7 +739,9 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xef => panic!("Operation unimplemented"),
         0xf0 => panic!("Operation unimplemented"),
         0xf1 => panic!("Operation unimplemented"),
-        0xf2 => panic!("Operation unimplemented"),
+        0xf2 => { // JP
+            panic!("Operation unimplemented")
+        },
         0xf3 => panic!("Operation unimplemented"),
         0xf4 => panic!("Operation unimplemented"),
         0xf5 => panic!("Operation unimplemented"),
@@ -702,7 +749,9 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xf7 => panic!("Operation unimplemented"),
         0xf8 => panic!("Operation unimplemented"),
         0xf9 => panic!("Operation unimplemented"),
-        0xfa => panic!("Operation unimplemented"),
+        0xfa => { // JM
+            panic!("Operation unimplemented")
+        },
         0xfb => panic!("Operation unimplemented"),
         0xfc => panic!("Operation unimplemented"),
         0xfd => panic!("Operation unimplemented"),
