@@ -203,7 +203,7 @@ fn inx(reg_pair: u16) -> (u8, u8) {
     let result: u32 = reg_pair as u32 + 1;
     // Using a u32 to avoid panic on overflow
 
-    split_registers(result as u16)
+    split_register_pair(result as u16)
 }
 
 fn dcx(reg_pair: u16) -> (u8, u8) {
@@ -213,7 +213,7 @@ fn dcx(reg_pair: u16) -> (u8, u8) {
     let result: i32 = reg_pair as i32 - 1;
     // Using a i32 to avoid panic on overflow or underflow
 
-    split_registers((result & 0xffff) as u16)
+    split_register_pair((result & 0xffff) as u16)
 }
 
 fn inr(reg: u8, flags: &mut Flags) -> u8 {
@@ -268,7 +268,7 @@ fn dad(hl_pair: u16, reg_pair: u16, flags: &mut Flags) -> (u8, u8) {
     // Setting carry flag
     // TODO: find a way to call set_flags_from_operation here
 
-    split_registers(result as u16)
+    split_register_pair(result as u16)
 }
 
 fn add(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
@@ -312,6 +312,24 @@ fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     (result & 0xff) as u8
 }
 
+fn jmp(address_bytes: (u8, u8), condition: Option<bool>) -> Option<u16> {
+    // Jumps to an address in memory, and optionally does so conditionaly
+    // The condition will be whether a specific flag is set or not
+    // TODO: should this modify the pc address directly???
+    //  arithmetic operations modify the flags directly but I don't know if I actually like that
+
+    let address: u16 = pair_registers(address_bytes.1, address_bytes.0);
+    // Little endian order
+    // This is a horrible name for a function if i'm calling it here
+
+    if condition.is_none() { return Some(address) }
+
+    let condition: bool = condition.expect("unwrapping condition that has already been checked");
+    if condition { return Some(address); }
+
+    None
+}
+
 fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     // Sets flags based on the result of an arithmetic operation
     let mut return_flags: Flags = flags;
@@ -343,7 +361,7 @@ fn pair_registers(reg_1: u8, reg_2: u8) -> u16 {
     (reg_1 as u16) << 8 | reg_2 as u16
 }
 
-fn split_registers(reg_pair: u16) -> (u8, u8) {
+fn split_register_pair(reg_pair: u16) -> (u8, u8) {
     // Splits a u16 register pair into a tuple of u8s
 
     let byte_1: u8 = (reg_pair >> 8) as u8;
@@ -353,6 +371,7 @@ fn split_registers(reg_pair: u16) -> (u8, u8) {
 }
 
 pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
+    // Reads an op_code and performs the cooresponding operation
     // Returns the number of additional bytes read for the operation
 
     match op_code {
@@ -387,7 +406,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x17 => panic!("Operation unimplemented"),
         0x18 => panic!("Operation unimplemented"),
         0x19 => (cpu.h.value, cpu.l.value) = dad(
-            pair_registers(cpu.d.value, cpu.e.value),
+            pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.d.value, cpu.e.value),
             &mut cpu.flags
             ),
@@ -424,13 +443,12 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x31 => panic!("Operation unimplemented"),
         0x32 => panic!("Operation unimplemented"),
         0x33 => {
-            let sp_1: u8 = ( cpu.sp.address >> 8 ) as u8;
-            let sp_2: u8 = ( cpu.sp.address & 0xff ) as u8;
+            let (sp_1, sp_2): (u8, u8) = split_register_pair(cpu.sp.address);
             let (byte_1, byte_2): (u8, u8) = inx( pair_registers(sp_1, sp_2) );
-            cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
+            cpu.sp.address = pair_registers(byte_1, byte_2);
         },
         0x34 => cpu.memory.write_at(
-            pair_registers(cpu.h.value, cpu.l.value), 
+            pair_registers(cpu.h.value, cpu.l.value),
             inr(
                 cpu.memory.read_at(
                     pair_registers(cpu.h.value, cpu.l.value)),
@@ -453,10 +471,9 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             ),
         0x3a => panic!("Operation unimplemented"),
         0x3b => {
-            let sp_1: u8 = ( cpu.sp.address >> 8 ) as u8;
-            let sp_2: u8 = ( cpu.sp.address & 0xff ) as u8;
+            let (sp_1, sp_2): (u8, u8) = split_register_pair(cpu.sp.address);
             let (byte_1, byte_2): (u8, u8) = dcx( pair_registers(sp_1, sp_2) );
-            cpu.sp.address = (byte_1 as u16) << 8 | byte_2 as u16;
+            cpu.sp.address = pair_registers(byte_1, byte_2);
         },
         0x3c => cpu.a.value = inr(cpu.a.value, &mut cpu.flags),
         0x3d => cpu.a.value = dcr(cpu.a.value, &mut cpu.flags),
@@ -602,8 +619,23 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xbf => panic!("Operation unimplemented"),
         0xc0 => panic!("Operation unimplemented"),
         0xc1 => panic!("Operation unimplemented"),
-        0xc2 => panic!("Operation unimplemented"),
-        0xc3 => panic!("Operation unimplemented"),
+        0xc2 => { // JNZ
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address + 2)),
+                Some(cpu.flags.check_flag(Flag::Z) == 0)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
+        0xc3 => { // JMP
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address + 2)),
+                None
+                );
+            cpu.pc.address = jmp_address.expect("jmp with no condition should always return Some(address)");
+        },
         0xc4 => panic!("Operation unimplemented"),
         0xc5 => panic!("Operation unimplemented"),
         0xc6 => { // ADI
@@ -691,7 +723,7 @@ mod tests {
     fn test_memory_rw() {
         let mut test_mem: Memory = Memory::init();
 
-        for i in 0..65535 {
+        for i in 0..0xffff {
             assert_eq!(test_mem.read_at(i), 0x00);
 
             test_mem.write_at(i, 0xff);
@@ -700,7 +732,7 @@ mod tests {
     }
 
     #[test]
-    fn test_flags() {
+    fn test_flags_set_clear() {
         let mut flags: Flags = Flags::default();
 
         flags.set_flag(Flag::Z);
@@ -728,10 +760,15 @@ mod tests {
     }
 
     #[test]
-    fn test_hl_address() {
-        let h: Register = Register { value: 0x18, };
-        let l: Register = Register { value: 0xd4, };
-        assert_eq!(pair_registers(h.value, l.value), 0x18d4);
+    fn test_register_pairing() {
+        let h: u8 = 0x18;
+        let l: u8 = 0xd4;
+        let hl: u16 = pair_registers(h, l);
+
+        assert_eq!(hl, 0x18d4);
+        assert_eq!(split_register_pair(hl), (h, l));
+
+
     }
 
     #[test]
@@ -815,6 +852,21 @@ mod tests {
         assert_eq!(flags.check_flag(Flag::CY), 0);
         assert_eq!(flags.check_flag(Flag::P), 0);
         // This should never affect any flag other than the carry flag
+    }
+
+    #[test]
+    fn test_branching_operations() {
+        let mut cpu: Cpu = Cpu::init();
+
+        // JMP
+        assert_eq!(jmp((0xd4, 0xc3), None), Some(0xc3d4));
+
+        // JNZ
+        assert_eq!(jmp((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0)), Some(0xc3d4));
+        cpu.flags.set_flag(Flag::Z);
+        assert_eq!(jmp((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0)), None);
+
+        // The rest should be identical so shouldn't require seperate testing
     }
 
     #[test]
@@ -910,5 +962,33 @@ mod tests {
 
         handle_op_code(0x39, &mut cpu);
         assert_eq!((cpu.h.value, cpu.l.value), (0x02, 0x02));
+
+        // JMP
+        cpu.pc.address = 0x0004;
+        cpu.memory.write_at(0x0005, 0xd4);
+        cpu.memory.write_at(0x0006, 0xc3);
+
+        handle_op_code(0xc3, &mut cpu);
+        assert_eq!(cpu.pc.address, 0xc3d4);
+
+        // JNZ
+        cpu.pc.address = 0x0004;
+        cpu.memory.write_at(0x0005, 0xd4);
+        cpu.memory.write_at(0x0006, 0xc3);
+        cpu.flags.clear_flags();
+
+        handle_op_code(0xc2, &mut cpu);
+        assert_eq!(cpu.pc.address, 0xc3d4);
+        // Should jmp to c3d4 since Z flag is not set
+
+        cpu.pc.address = 0x0004;
+        cpu.memory.write_at(0x0005, 0xd4);
+        cpu.memory.write_at(0x0006, 0xc3);
+        cpu.flags.set_flag(Flag::Z);
+
+        assert_eq!(handle_op_code(0xc2, &mut cpu), 2);
+        // Should return 2 additional bytes if it doesn't jmp
+        assert_eq!(cpu.pc.address, 0x0004);
+        // Should not jmp to c3d4 since Z flag is set
     }
 }
