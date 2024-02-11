@@ -330,6 +330,75 @@ fn jmp(address_bytes: (u8, u8), condition: Option<bool>) -> Option<u16> {
     None
 }
 
+fn call(
+    address_bytes: (u8, u8),
+    condition: Option<bool>,
+    stack_pointer: &mut AddressPointer,
+    memory: &mut Memory,
+    return_adress: u16
+    ) -> Option<u16> {
+    // Pushes the return address to the stack then conditionally returns the address to jump to
+
+    let jmp_address: Option<u16> = jmp(address_bytes, condition);
+
+    match jmp_address {
+        Some(_) => {
+            // Only add to stack if there is somewhere to jump to
+            let return_adress_bytes: (u8, u8) = split_register_pair(return_adress);
+            push((return_adress_bytes.1, return_adress_bytes.0), stack_pointer, memory);
+            // Push return address to stack
+            // 0xc3d4 will be pushed as 0xd4 0xc3
+        }
+        None => { }
+    }
+
+    jmp_address
+}
+
+fn ret(condition: Option<bool>, stack_pointer: &mut AddressPointer, memory: &mut Memory) -> Option<u16> {
+    // Pops the return address from the stack and conditionally returns it
+
+    let return_adress_bytes: (u8, u8) = pop(stack_pointer, memory);
+    // if the address 0xc3d4 was pushed this should return (0xd4, 0xc3)
+
+    let return_adress: u16 = pair_registers(return_adress_bytes.1, return_adress_bytes.0);
+
+    if condition.is_none() { return Some(return_adress) }
+
+    let condition: bool = condition.expect("unwrapping condition that has already been checked");
+    if condition { return Some(return_adress); }
+
+    None
+}
+
+fn push(data_bytes: (u8, u8), stack_pointer: &mut AddressPointer, memory: &mut Memory) {
+    // Puts some data onto the stack
+
+    memory.write_at(stack_pointer.address, data_bytes.0);
+    memory.write_at(stack_pointer.address - 1, data_bytes.1);
+    // d4 c3 will go in as d4 c3
+
+    stack_pointer.address -= 2;
+    // stacl grows downwards
+}
+
+fn pop(stack_pointer: &mut AddressPointer, memory: &mut Memory) -> (u8, u8) {
+    // Returns the data at the top of the stack
+
+    let byte_1 = memory.read_at(stack_pointer.address + 2);
+    let byte_2 = memory.read_at(stack_pointer.address + 1);
+    // Find two bytes before stack pointer
+
+    memory.write_at(stack_pointer.address + 1, 0x00);
+    memory.write_at(stack_pointer.address + 2, 0x00);
+    // Zeroes memory, probably not necessary but nice for cleanliness and debugging
+
+    stack_pointer.address += 2;
+    // stack shrinks upwards
+
+    (byte_1, byte_2)
+}
+
 fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     // Sets flags based on the result of an arithmetic operation
     let mut return_flags: Flags = flags;
@@ -809,6 +878,22 @@ mod tests {
     }
 
     #[test]
+    fn test_push_pop() {
+        let mut sp: AddressPointer = AddressPointer::at(0x2400);
+        let mut memory: Memory = Memory::init();
+
+        // Push
+        push((0xd4, 0xc3), &mut sp, &mut memory);
+        assert_eq!(sp.address, 0x23fe);
+        assert_eq!(memory.read_at(0x2400), 0xd4);
+        assert_eq!(memory.read_at(0x23ff), 0xc3);
+
+        // Pop
+        assert_eq!(pop(&mut sp, &mut memory), (0xd4, 0xc3));
+        assert_eq!(sp.address, 0x2400);
+    }
+
+    #[test]
     fn test_register_pairing() {
         let h: u8 = 0x18;
         let l: u8 = 0xd4;
@@ -816,8 +901,6 @@ mod tests {
 
         assert_eq!(hl, 0x18d4);
         assert_eq!(split_register_pair(hl), (h, l));
-
-
     }
 
     #[test]
@@ -916,6 +999,29 @@ mod tests {
         assert_eq!(jmp((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0)), None);
 
         // The rest should be identical so shouldn't require seperate testing
+
+        // CALL & RET
+        cpu.pc.address = 0x0002;
+
+        assert_eq!(call((0xd4, 0xc3), None, &mut cpu.sp, &mut cpu.memory, cpu.pc.address), Some(0xc3d4));
+        assert_eq!(ret(None, &mut cpu.sp, &mut cpu.memory), Some(0x0002));
+
+        // CNZ & RNZ
+        cpu.memory = Memory::init();
+        cpu.pc.address = 0x0002;
+        cpu.sp.address = 0x2400;
+        cpu.flags.clear_flags();
+
+        assert_eq!(call((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory, cpu.pc.address), Some(0xc3d4));
+        assert_eq!(ret(Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory), Some(0x0002));
+
+        cpu.flags.set_flag(Flag::Z);
+        assert_eq!(call((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory, cpu.pc.address), None);
+        assert_eq!(cpu.memory.read_at(0x2400), 0x00);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+        // Checking it didnt write a return address to the stack if it isn't jumping
+
+        assert_eq!(ret(Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory), None);
     }
 
     #[test]
@@ -1013,7 +1119,8 @@ mod tests {
         assert_eq!((cpu.h.value, cpu.l.value), (0x02, 0x02));
 
         // JMP
-        cpu.pc.address = 0x0004;
+        cpu.pc.address = 0x0005;
+        // pc pointes to byte after op code when handling op codes
         cpu.memory.write_at(0x0005, 0xd4);
         cpu.memory.write_at(0x0006, 0xc3);
 
@@ -1021,7 +1128,7 @@ mod tests {
         assert_eq!(cpu.pc.address, 0xc3d4);
 
         // JNZ
-        cpu.pc.address = 0x0004;
+        cpu.pc.address = 0x0005;
         cpu.memory.write_at(0x0005, 0xd4);
         cpu.memory.write_at(0x0006, 0xc3);
         cpu.flags.clear_flags();
@@ -1030,14 +1137,14 @@ mod tests {
         assert_eq!(cpu.pc.address, 0xc3d4);
         // Should jmp to c3d4 since Z flag is not set
 
-        cpu.pc.address = 0x0004;
+        cpu.pc.address = 0x0005;
         cpu.memory.write_at(0x0005, 0xd4);
         cpu.memory.write_at(0x0006, 0xc3);
         cpu.flags.set_flag(Flag::Z);
 
         assert_eq!(handle_op_code(0xc2, &mut cpu), 2);
         // Should return 2 additional bytes if it doesn't jmp
-        assert_eq!(cpu.pc.address, 0x0004);
+        assert_eq!(cpu.pc.address, 0x0005);
         // Should not jmp to c3d4 since Z flag is set
     }
 }

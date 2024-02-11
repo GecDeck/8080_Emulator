@@ -24,6 +24,7 @@ fn main() {
         //  when handling operations that read additional bytes, the first byte to be read will be
         //  at the pc address NOT pc address + 1
 
+        println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
         let additional_bytes: u16 = cpu::handle_op_code(op_code, &mut cpu);
         cpu.pc.address += additional_bytes;
     }
