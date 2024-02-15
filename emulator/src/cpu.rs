@@ -338,6 +338,7 @@ fn call(
     return_adress: u16
     ) -> Option<u16> {
     // Pushes the return address to the stack then conditionally returns the address to jump to
+    // The return address is the address of the next instruction
 
     let jmp_address: Option<u16> = jmp(address_bytes, condition);
 
@@ -705,13 +706,32 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                 );
             cpu.pc.address = jmp_address.expect("jmp with no condition should always return Some(address)");
         },
-        0xc4 => panic!("Operation unimplemented"),
+        0xc4 => { // CNZ
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::Z) == 0),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xc5 => panic!("Operation unimplemented"),
         0xc6 => { // ADI
             cpu.a.value = add(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return 1;
         },
-        0xc7 => panic!("Operation unimplemented"),
+        0xc7 => { // RST 0
+            let call_address: Option<u16> = call(
+                (0x00, 0x00),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
         0xc8 => panic!("Operation unimplemented"),
         0xc9 => panic!("Operation unimplemented"),
         0xca => { // JZ
@@ -725,13 +745,40 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             };
         },
         0xcb => panic!("Operation unimplemented"),
-        0xcc => panic!("Operation unimplemented"),
-        0xcd => panic!("Operation unimplemented"),
+        0xcc => { // CZ
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::Z) == 1),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
+        0xcd => { // CALL
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
         0xce => { // ACI
             cpu.a.value = adc(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return 1;
         },
-        0xcf => panic!("Operation unimplemented"),
+        0xcf => { // RST 1
+            let call_address: Option<u16> = call(
+                (0x00, 0x08),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
         0xd0 => panic!("Operation unimplemented"),
         0xd1 => panic!("Operation unimplemented"),
         0xd2 => { // JNC
@@ -745,13 +792,32 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             };
         },
         0xd3 => panic!("Operation unimplemented"),
-        0xd4 => panic!("Operation unimplemented"),
+        0xd4 => { // CNC
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::CY) == 0),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xd5 => panic!("Operation unimplemented"),
         0xd6 => { // SUI
             cpu.a.value = sub(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return 1;
         },
-        0xd7 => panic!("Operation unimplemented"),
+        0xd7 => { // RST 2
+            let call_address: Option<u16> = call(
+                (0x00, 0x10),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
         0xd8 => panic!("Operation unimplemented"),
         0xd9 => panic!("Operation unimplemented"),
         0xda => { // JC
@@ -765,13 +831,32 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             };
         },
         0xdb => panic!("Operation unimplemented"),
-        0xdc => panic!("Operation unimplemented"),
+        0xdc => { // CC
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::CY) == 1),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xdd => panic!("Operation unimplemented"),
         0xde => { // SBI
             cpu.a.value = sbb(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return 1;
         },
-        0xdf => panic!("Operation unimplemented"),
+        0xdf => { // RST 3
+            let call_address: Option<u16> = call(
+                (0x00, 0x18),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
         0xe0 => panic!("Operation unimplemented"),
         0xe1 => panic!("Operation unimplemented"),
         0xe2 => { // JPO
@@ -785,12 +870,35 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             };
         },
         0xe3 => panic!("Operation unimplemented"),
-        0xe4 => panic!("Operation unimplemented"),
+        0xe4 => { // CPO
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::P) == 0),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xe5 => panic!("Operation unimplemented"),
         0xe6 => panic!("Operation unimplemented"),
-        0xe7 => panic!("Operation unimplemented"),
+        0xe7 => { // RST 4
+            let call_address: Option<u16> = call(
+                (0x00, 0x20),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
         0xe8 => panic!("Operation unimplemented"),
-        0xe9 => panic!("Operation unimplemented"),
+        0xe9 => { // PCHL
+            let hi: u8 = cpu.h.value;
+            let lo: u8 = cpu.l.value;
+            cpu.pc.address = pair_registers(hi, lo);
+        },
         0xea => { // JPE
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -802,30 +910,73 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             };
         },
         0xeb => panic!("Operation unimplemented"),
-        0xec => panic!("Operation unimplemented"),
+        0xec => { // CPE
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::P) == 1),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
+        },
         0xed => panic!("Operation unimplemented"),
         0xee => panic!("Operation unimplemented"),
-        0xef => panic!("Operation unimplemented"),
-        0xf0 => panic!("Operation unimplemented"),
+        0xef => { // RST 5
+            let call_address: Option<u16> = call(
+                (0x00, 0x28),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
+        0xf0 => { // RP
+            panic!("Operation unimplemented")
+        },
         0xf1 => panic!("Operation unimplemented"),
         0xf2 => { // JP
             panic!("Operation unimplemented")
         },
         0xf3 => panic!("Operation unimplemented"),
-        0xf4 => panic!("Operation unimplemented"),
+        0xf4 => { // CP
+            panic!("Operation unimplemented")
+        },
         0xf5 => panic!("Operation unimplemented"),
         0xf6 => panic!("Operation unimplemented"),
-        0xf7 => panic!("Operation unimplemented"),
-        0xf8 => panic!("Operation unimplemented"),
+        0xf7 => { // RST 6
+            let call_address: Option<u16> = call(
+                (0x00, 0x30),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
+        0xf8 => { // RM
+            panic!("Operation unimplemented")
+        },
         0xf9 => panic!("Operation unimplemented"),
         0xfa => { // JM
             panic!("Operation unimplemented")
         },
         0xfb => panic!("Operation unimplemented"),
-        0xfc => panic!("Operation unimplemented"),
+        0xfc => { // CM
+            panic!("Operation unimplemented")
+        },
         0xfd => panic!("Operation unimplemented"),
         0xfe => panic!("Operation unimplemented"),
-        0xff => panic!("Operation unimplemented"),
+        0xff => { // RST 7
+            let call_address: Option<u16> = call(
+                (0x00, 0x38),
+                None,
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address
+                );
+            cpu.pc.address = call_address.expect("call with no condition always returns an address");
+        },
     }
 
     0
@@ -1146,5 +1297,23 @@ mod tests {
         // Should return 2 additional bytes if it doesn't jmp
         assert_eq!(cpu.pc.address, 0x0005);
         // Should not jmp to c3d4 since Z flag is set
+
+        // CALL
+        todo!();
+
+        // CNZ
+        todo!();
+
+        // PCHL
+        todo!();
+
+        // RET
+        todo!();
+
+        // RNZ
+        todo!();
+
+        // RST 7
+        todo!();
     }
 }
