@@ -938,11 +938,27 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         },
         0xf1 => panic!("Operation unimplemented"),
         0xf2 => { // JP
-            panic!("Operation unimplemented")
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::S) == 0)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
         },
         0xf3 => panic!("Operation unimplemented"),
         0xf4 => { // CP
-            panic!("Operation unimplemented")
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::S) == 0),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
         },
         0xf5 => panic!("Operation unimplemented"),
         0xf6 => panic!("Operation unimplemented"),
@@ -960,11 +976,27 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         },
         0xf9 => panic!("Operation unimplemented"),
         0xfa => { // JM
-            panic!("Operation unimplemented")
+            let jmp_address: Option<u16> = jmp(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::S) == 1)
+                );
+            match jmp_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
         },
         0xfb => panic!("Operation unimplemented"),
         0xfc => { // CM
-            panic!("Operation unimplemented")
+            let call_address: Option<u16> = call(
+                (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
+                Some(cpu.flags.check_flag(Flag::S) == 1),
+                &mut cpu.sp, &mut cpu.memory,
+                cpu.pc.address + 2
+                );
+            match call_address {
+                Some(address) => cpu.pc.address = address,
+                None => return 2,
+            };
         },
         0xfd => panic!("Operation unimplemented"),
         0xfe => panic!("Operation unimplemented"),
