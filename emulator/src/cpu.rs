@@ -183,6 +183,21 @@ impl Cpu {
         }
     }
 
+    pub fn reset(&mut self) {
+        // Resets all the values of the cpu
+        self.a = Register::default();
+        self.b = Register::default();
+        self.c = Register::default();
+        self.d = Register::default();
+        self.e = Register::default();
+        self.h = Register::default();
+        self.l = Register::default();
+        self.sp = AddressPointer::at(0x2400);
+        self.pc = AddressPointer::at(0x0000);
+        self.memory = Memory::init();
+        self.flags = Flags::default();
+    }
+
     pub fn check_stack_overflow(&self) -> bool {
         // Checks if the stack has overflowed
         // The stack grows growns downwards on the 8080
@@ -318,14 +333,14 @@ fn jmp(address_bytes: (u8, u8), condition: Option<bool>) -> Option<u16> {
     // TODO: should this modify the pc address directly???
     //  arithmetic operations modify the flags directly but I don't know if I actually like that
 
-    let address: u16 = pair_registers(address_bytes.1, address_bytes.0);
-    // Little endian order
-    // This is a horrible name for a function if i'm calling it here
+    if condition.is_none() | condition.is_some_and(|condition| condition == true) {
+        // If there is no condition or the supplied condition is true do the following
+        let address: u16 = pair_registers(address_bytes.1, address_bytes.0);
+        // Little endian order
+        // This is a horrible name for a function if i'm calling it here
 
-    if condition.is_none() { return Some(address) }
-
-    let condition: bool = condition.expect("unwrapping condition that has already been checked");
-    if condition { return Some(address); }
+        return Some(address);
+    }
 
     None
 }
@@ -359,15 +374,15 @@ fn call(
 fn ret(condition: Option<bool>, stack_pointer: &mut AddressPointer, memory: &mut Memory) -> Option<u16> {
     // Pops the return address from the stack and conditionally returns it
 
-    let return_adress_bytes: (u8, u8) = pop(stack_pointer, memory);
-    // if the address 0xc3d4 was pushed this should return (0xd4, 0xc3)
+    if condition.is_none() | condition.is_some_and(|condition| condition == true) {
+        // If there is no condition or the supplied condition is true do the following
 
-    let return_adress: u16 = pair_registers(return_adress_bytes.1, return_adress_bytes.0);
+        let return_adress_bytes: (u8, u8) = pop(stack_pointer, memory);
+        // if the address 0xc3d4 was pushed this should return (0xd4, 0xc3)
+        let return_adress: u16 = pair_registers(return_adress_bytes.1, return_adress_bytes.0);
 
-    if condition.is_none() { return Some(return_adress) }
-
-    let condition: bool = condition.expect("unwrapping condition that has already been checked");
-    if condition { return Some(return_adress); }
+        return Some(return_adress);
+    }
 
     None
 }
@@ -687,7 +702,16 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xbd => panic!("Operation unimplemented"),
         0xbe => panic!("Operation unimplemented"),
         0xbf => panic!("Operation unimplemented"),
-        0xc0 => panic!("Operation unimplemented"),
+        0xc0 => { // RNZ
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::Z) == 0),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
+        },
         0xc1 => panic!("Operation unimplemented"),
         0xc2 => { // JNZ
             let jmp_address: Option<u16> = jmp(
@@ -705,6 +729,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                 None
                 );
             cpu.pc.address = jmp_address.expect("jmp with no condition should always return Some(address)");
+            return 2;
         },
         0xc4 => { // CNZ
             let call_address: Option<u16> = call(
@@ -732,8 +757,23 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
-        0xc8 => panic!("Operation unimplemented"),
-        0xc9 => panic!("Operation unimplemented"),
+        0xc8 => { // RZ
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::Z) == 1),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
+        },
+        0xc9 => { // RET
+            let ret_address: Option<u16> = ret(
+                None,
+                &mut cpu.sp, &mut cpu.memory
+                );
+            cpu.pc.address = ret_address.expect("ret with no conditions always returns an address");
+        },
         0xca => { // JZ
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -765,6 +805,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                 cpu.pc.address + 2
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
+            return 2;
         },
         0xce => { // ACI
             cpu.a.value = adc(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
@@ -772,14 +813,23 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         },
         0xcf => { // RST 1
             let call_address: Option<u16> = call(
-                (0x00, 0x08),
+                (0x08, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
-        0xd0 => panic!("Operation unimplemented"),
+        0xd0 => { // RNC
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::CY) == 0),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
+        },
         0xd1 => panic!("Operation unimplemented"),
         0xd2 => { // JNC
             let jmp_address: Option<u16> = jmp(
@@ -811,14 +861,23 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         },
         0xd7 => { // RST 2
             let call_address: Option<u16> = call(
-                (0x00, 0x10),
+                (0x10, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
-        0xd8 => panic!("Operation unimplemented"),
+        0xd8 => { // RC
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::CY) == 1),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
+        },
         0xd9 => panic!("Operation unimplemented"),
         0xda => { // JC
             let jmp_address: Option<u16> = jmp(
@@ -850,14 +909,23 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         },
         0xdf => { // RST 3
             let call_address: Option<u16> = call(
-                (0x00, 0x18),
+                (0x18, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
-        0xe0 => panic!("Operation unimplemented"),
+        0xe0 => { // RPO
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::P) == 0),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
+        },
         0xe1 => panic!("Operation unimplemented"),
         0xe2 => { // JPO
             let jmp_address: Option<u16> = jmp(
@@ -886,14 +954,23 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xe6 => panic!("Operation unimplemented"),
         0xe7 => { // RST 4
             let call_address: Option<u16> = call(
-                (0x00, 0x20),
+                (0x20, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
-        0xe8 => panic!("Operation unimplemented"),
+        0xe8 => { // RPE
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::P) == 1),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
+        },
         0xe9 => { // PCHL
             let hi: u8 = cpu.h.value;
             let lo: u8 = cpu.l.value;
@@ -926,7 +1003,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xee => panic!("Operation unimplemented"),
         0xef => { // RST 5
             let call_address: Option<u16> = call(
-                (0x00, 0x28),
+                (0x28, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
@@ -934,7 +1011,14 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
         0xf0 => { // RP
-            panic!("Operation unimplemented")
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::S) == 0),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
         },
         0xf1 => panic!("Operation unimplemented"),
         0xf2 => { // JP
@@ -964,7 +1048,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xf6 => panic!("Operation unimplemented"),
         0xf7 => { // RST 6
             let call_address: Option<u16> = call(
-                (0x00, 0x30),
+                (0x30, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
@@ -972,7 +1056,14 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
         },
         0xf8 => { // RM
-            panic!("Operation unimplemented")
+            let ret_address: Option<u16> = ret(
+                Some(cpu.flags.check_flag(Flag::S) == 1),
+                &mut cpu.sp, &mut cpu.memory
+                );
+            match ret_address {
+                Some(address) => cpu.pc.address = address,
+                None => { return 0 },
+            };
         },
         0xf9 => panic!("Operation unimplemented"),
         0xfa => { // JM
@@ -1002,7 +1093,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0xfe => panic!("Operation unimplemented"),
         0xff => { // RST 7
             let call_address: Option<u16> = call(
-                (0x00, 0x38),
+                (0x38, 0x00),
                 None,
                 &mut cpu.sp, &mut cpu.memory,
                 cpu.pc.address
@@ -1307,7 +1398,7 @@ mod tests {
         cpu.memory.write_at(0x0005, 0xd4);
         cpu.memory.write_at(0x0006, 0xc3);
 
-        handle_op_code(0xc3, &mut cpu);
+        assert_eq!(handle_op_code(0xc3, &mut cpu), 2);
         assert_eq!(cpu.pc.address, 0xc3d4);
 
         // JNZ
@@ -1330,22 +1421,95 @@ mod tests {
         assert_eq!(cpu.pc.address, 0x0005);
         // Should not jmp to c3d4 since Z flag is set
 
-        // CALL
-        todo!();
+        // CALL & RET
+        cpu.reset();
+        cpu.pc.address = 0x0005;
+        cpu.memory.write_at(0x0005, 0xd4);
+        cpu.memory.write_at(0x0006, 0xc3);
 
-        // CNZ
-        todo!();
+        assert_eq!(handle_op_code(0xcd, &mut cpu), 2);
+        assert_eq!(cpu.pc.address, 0xc3d4);
+        assert_eq!(cpu.sp.address, 0x23fe);
+        // The stack pointer should be decremented 2
+
+        assert_eq!(cpu.memory.read_at(0x2400), 0x07);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+        // The return address of the next instruction should be on the stack
+
+        handle_op_code(0xc9, &mut cpu);
+        assert_eq!(cpu.pc.address, 0x0007);
+        assert_eq!(cpu.sp.address, 0x2400);
+        // The stack pointer should be reincremented
+
+        assert_eq!(cpu.memory.read_at(0x2400), 0x00);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+        // The return address should be removed from the stack
+
+        // CNZ & RNZ
+        cpu.reset();
+        cpu.pc.address = 0x0005;
+        cpu.memory.write_at(0x0005, 0xd4);
+        cpu.memory.write_at(0x0006, 0xc3);
+
+        cpu.flags.set_flag(Flag::Z);
+        // Expect not to call
+        assert_eq!(handle_op_code(0xc4, &mut cpu), 2);
+        // Returns 2 additional bytes read if no call
+
+        assert_eq!(cpu.pc.address, 0x0005);
+        assert_eq!(cpu.sp.address, 0x2400);
+        assert_eq!(cpu.memory.read_at(0x2400), 0x00);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+        // Nothing should change if no call
+
+        cpu.flags.clear_flags();
+        // Expect call
+        assert_eq!(handle_op_code(0xc4, &mut cpu), 0);
+
+        assert_eq!(cpu.pc.address, 0xc3d4);
+        assert_eq!(cpu.sp.address, 0x23fe);
+        assert_eq!(cpu.memory.read_at(0x2400), 0x07);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+
+        cpu.flags.set_flag(Flag::Z);
+        // Expect to not return
+        handle_op_code(0xc0, &mut cpu);
+
+        assert_eq!(cpu.pc.address, 0xc3d4);
+        assert_eq!(cpu.sp.address, 0x23fe);
+        assert_eq!(cpu.memory.read_at(0x2400), 0x07);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+        // Nothing should change if not returning
+
+        cpu.flags.clear_flags();
+        // Expect to return
+        handle_op_code(0xc0, &mut cpu);
+
+        assert_eq!(cpu.pc.address, 0x0007);
+        assert_eq!(cpu.sp.address, 0x2400);
+        assert_eq!(cpu.memory.read_at(0x2400), 0x00);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
 
         // PCHL
-        todo!();
+        cpu.reset();
+        cpu.pc.address = 0x0005;
+        cpu.h.value = 0xc3;
+        cpu.l.value = 0xd4;
+        handle_op_code(0xe9, &mut cpu);
 
-        // RET
-        todo!();
-
-        // RNZ
-        todo!();
+        assert_eq!(cpu.pc.address, 0xc3d4);
+        // PCHL is a jmp not a call
 
         // RST 7
-        todo!();
+        cpu.reset();
+        cpu.pc.address = 0x0005;
+
+        cpu.pc.address += 1;
+        handle_op_code(0xff, &mut cpu);
+
+        assert_eq!(cpu.pc.address, 0x0038);
+        assert_eq!(cpu.sp.address, 0x23fe);
+        assert_eq!(cpu.memory.read_at(0x2400), 0x06);
+        assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
     }
 }
