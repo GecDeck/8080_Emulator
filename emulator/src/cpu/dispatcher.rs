@@ -274,7 +274,6 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                 None
                 );
             cpu.pc.address = jmp_address.expect("jmp with no condition should always return Some(address)");
-            return 2;
         },
         0xc4 => { // CNZ
             let call_address: Option<u16> = call(
@@ -350,7 +349,6 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                 cpu.pc.address + 2
                 );
             cpu.pc.address = call_address.expect("call with no condition always returns an address");
-            return 2;
         },
         0xce => { // ACI
             cpu.a.value = adc(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);

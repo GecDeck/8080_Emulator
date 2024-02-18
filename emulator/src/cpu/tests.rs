@@ -289,7 +289,7 @@ fn test_operation_handling() {
     cpu.memory.write_at(0x0005, 0xd4);
     cpu.memory.write_at(0x0006, 0xc3);
 
-    assert_eq!(handle_op_code(0xc3, &mut cpu), 2);
+    assert_eq!(handle_op_code(0xc3, &mut cpu), 0);
     assert_eq!(cpu.pc.address, 0xc3d4);
 
     // JNZ
@@ -318,7 +318,7 @@ fn test_operation_handling() {
     cpu.memory.write_at(0x0005, 0xd4);
     cpu.memory.write_at(0x0006, 0xc3);
 
-    assert_eq!(handle_op_code(0xcd, &mut cpu), 2);
+    assert_eq!(handle_op_code(0xcd, &mut cpu), 0);
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
     // The stack pointer should be decremented 2
