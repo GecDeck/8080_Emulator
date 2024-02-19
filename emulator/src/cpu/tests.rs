@@ -172,10 +172,9 @@ fn test_branching_operations() {
     assert_eq!(ret(None, &mut cpu.sp, &mut cpu.memory), Some(0x0002));
 
     // CNZ & RNZ
-    cpu.memory = Memory::init();
+    cpu.reset();
     cpu.pc.address = 0x0002;
     cpu.sp.address = 0x2400;
-    cpu.flags.clear_flags();
 
     assert_eq!(call((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory, cpu.pc.address), Some(0xc3d4));
     assert_eq!(ret(Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory), Some(0x0002));

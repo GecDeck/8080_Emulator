@@ -398,7 +398,7 @@ fn push(data_bytes: (u8, u8), stack_pointer: &mut AddressPointer, memory: &mut M
     // d4 c3 will go in as d4 c3
 
     stack_pointer.address -= 2;
-    // stacl grows downwards
+    // stack grows downwards
 }
 
 fn pop(stack_pointer: &mut AddressPointer, memory: &mut Memory) -> (u8, u8) {
