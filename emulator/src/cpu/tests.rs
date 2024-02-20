@@ -189,6 +189,29 @@ fn test_branching_operations() {
 }
 
 #[test]
+fn test_logical_operations() {
+    let mut cpu: Cpu = Cpu::init();
+
+    // AND
+    assert_eq!(and(0b10101010, 0b01011010, &mut cpu.flags), 0b00001010);
+
+    // XOR
+    assert_eq!(xor(0b10101010, 0b10100000, &mut cpu.flags), 0b00001010);
+
+    // OR
+    assert_eq!(or(0b10101010, 0b00000101, &mut cpu.flags), 0b10101111);
+
+    // NOT
+    assert_eq!(not(0b10101010, &mut cpu.flags), 0b01010101);
+
+    // Compare
+    todo!();
+
+    // Rotate
+    todo!();
+}
+
+#[test]
 fn test_operation_handling() {
     let mut cpu: Cpu = Cpu::init();
 

@@ -418,6 +418,47 @@ fn pop(stack_pointer: &mut AddressPointer, memory: &mut Memory) -> (u8, u8) {
     (byte_1, byte_2)
 }
 
+fn and(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // &s two registers together, sets flags based on the result, then returns the result
+
+    let result: u8 = reg_1 & reg_2;
+
+    result
+}
+
+fn xor(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // ^s two registers together, sets flags based on the result, then returns the result
+
+    let result: u8 = reg_1 ^ reg_2;
+
+    result
+}
+
+fn or(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // |s two registers together, sets flags based on the result, then returns the result
+
+    let result: u8 = reg_1 | reg_2;
+
+    result
+}
+
+fn not(reg: u8, flags: &mut Flags) -> u8 {
+    // gets the not of a register, sets flags based on the result, then returns the result
+
+    let result: u8 = !reg;
+
+    result
+}
+
+fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+    // Ge ts the difference of two registers, and sets flags based on the result
+    //  The result is discarded
+
+    let result: u8 = reg_1 - reg_2;
+
+    result
+}
+
 fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     // Sets flags based on the result of an arithmetic operation
     let mut return_flags: Flags = flags;

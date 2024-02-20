@@ -92,7 +92,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
                     &mut cpu.flags)
             ),
         0x36 => panic!("Operation unimplemented"),
-        0x37 => panic!("Operation unimplemented"),
+        0x37 => cpu.flags.set_flag(Flag::CY),
         0x38 => panic!("Operation unimplemented"),
         0x39 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
@@ -108,7 +108,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> u16 {
         0x3c => cpu.a.value = inr(cpu.a.value, &mut cpu.flags),
         0x3d => cpu.a.value = dcr(cpu.a.value, &mut cpu.flags),
         0x3e => panic!("Operation unimplemented"),
-        0x3f => panic!("Operation unimplemented"),
+        0x3f => cpu.flags.clear_flag(Flag::CY),
 
         // MOV OPERATIONS
         0x40 => cpu.b.value = cpu.b.value,
