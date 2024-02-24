@@ -10,7 +10,7 @@ fn test_operation_coverage() {
     for i in 0..=0xff {
         let result = handle_op_code(i, &mut cpu);
         match result {
-            Err(_) => println!("0x{:02x} unimplemented", i),
+            Err(e) => println!("0x{:02x}    {} unimplemented", i, e),
             Ok(_) => covered_operations += 1,
         }
     }

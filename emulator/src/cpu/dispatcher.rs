@@ -7,54 +7,54 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
     match op_code {
         0x00 => {},
         // NOP
-        0x01 => return Err("Operation unimplemented"),
-        0x02 => return Err("Operation unimplemented"),
+        0x01 => return Err("LXI B"),
+        0x02 => return Err("STAX B"),
         0x03 => (cpu.b.value, cpu.c.value) = inx( pair_registers(cpu.b.value, cpu.c.value) ),
         0x04 => cpu.b.value = inr(cpu.b.value, &mut cpu.flags),
         0x05 => cpu.b.value = dcr(cpu.b.value, &mut cpu.flags),
-        0x06 => return Err("Operation unimplemented"),
-        0x07 => return Err("Operation unimplemented"),
-        0x08 => return Err("Operation unimplemented"),
+        0x06 => return Err("MVI, B"),
+        0x07 => return Err("RLC"),
+        0x08 => return Err("NOP"),
         0x09 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.b.value, cpu.c.value),
             &mut cpu.flags
             ),
-        0x0a => return Err("Operation unimplemented"),
+        0x0a => return Err("LDAX B"),
         0x0b => (cpu.b.value, cpu.c.value) = dcx( pair_registers(cpu.b.value, cpu.c.value) ),
         0x0c => cpu.c.value = inr(cpu.c.value, &mut cpu.flags),
         0x0d => cpu.c.value = dcr(cpu.c.value, &mut cpu.flags),
-        0x0e => return Err("Operation unimplemented"),
-        0x0f => return Err("Operation unimplemented"),
-        0x10 => return Err("Operation unimplemented"),
-        0x11 => return Err("Operation unimplemented"),
-        0x12 => return Err("Operation unimplemented"),
+        0x0e => return Err("MVI C"),
+        0x0f => return Err("RRC"),
+        0x10 => return Err("NOP"),
+        0x11 => return Err("LXI D"),
+        0x12 => return Err("STAX D"),
         0x13 => (cpu.d.value, cpu.e.value) = inx( pair_registers(cpu.d.value, cpu.c.value) ),
         0x14 => cpu.d.value = inr(cpu.d.value, &mut cpu.flags),
         0x15 => cpu.d.value = dcr(cpu.d.value, &mut cpu.flags),
-        0x16 => return Err("Operation unimplemented"),
-        0x17 => return Err("Operation unimplemented"),
-        0x18 => return Err("Operation unimplemented"),
+        0x16 => return Err("MVI D"),
+        0x17 => return Err("RAL"),
+        0x18 => return Err("NOP"),
         0x19 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.d.value, cpu.e.value),
             &mut cpu.flags
             ),
-        0x1a => return Err("Operation unimplemented"),
+        0x1a => return Err("LDAX D"),
         0x1b => (cpu.d.value, cpu.e.value) = dcx( pair_registers(cpu.d.value, cpu.e.value) ),
         0x1c => cpu.e.value = inr(cpu.e.value, &mut cpu.flags),
         0x1d => cpu.e.value = dcr(cpu.e.value, &mut cpu.flags),
-        0x1e => return Err("Operation unimplemented"),
-        0x1f => return Err("Operation unimplemented"),
-        0x20 => return Err("Operation unimplemented"),
-        0x21 => return Err("Operation unimplemented"),
-        0x22 => return Err("Operation unimplemented"),
+        0x1e => return Err("MVI E"),
+        0x1f => return Err("RAR"),
+        0x20 => return Err("NOP"),
+        0x21 => return Err("LXI H"),
+        0x22 => return Err("SHLD"),
         0x23 => (cpu.h.value, cpu.l.value) = inx( pair_registers(cpu.h.value, cpu.l.value) ),
         0x24 => cpu.h.value = inr(cpu.h.value, &mut cpu.flags),
         0x25 => cpu.h.value = dcr(cpu.h.value, &mut cpu.flags),
-        0x26 => return Err("Operation unimplemented"),
-        0x27 => return Err("Operation unimplemented"),
-        0x28 => return Err("Operation unimplemented"),
+        0x26 => return Err("MVI H"),
+        0x27 => return Err("DAA"),
+        0x28 => return Err("NOP"),
         0x29 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.h.value, cpu.l.value),
@@ -63,15 +63,15 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         // This is documented as HL = HL + HI
         //  But I think it's supposed to just add HL to itself? I don't what what I means
         //  TODO: find out what I means
-        0x2a => return Err("Operation unimplemented"),
+        0x2a => return Err("LHLD"),
         0x2b => (cpu.h.value, cpu.l.value) = dcx( pair_registers(cpu.h.value, cpu.l.value) ),
         0x2c => cpu.l.value = inr(cpu.l.value, &mut cpu.flags),
         0x2d => cpu.l.value = dcr(cpu.l.value, &mut cpu.flags),
-        0x2e => return Err("Operation unimplemented"),
-        0x2f => return Err("Operation unimplemented"),
-        0x30 => return Err("Operation unimplemented"),
-        0x31 => return Err("Operation unimplemented"),
-        0x32 => return Err("Operation unimplemented"),
+        0x2e => return Err("MVI L"),
+        0x2f => return Err("CMA"),
+        0x30 => return Err("NOP"),
+        0x31 => return Err("LXI SP"),
+        0x32 => return Err("STA"),
         0x33 => {
             let (sp_1, sp_2): (u8, u8) = split_register_pair(cpu.sp.address);
             let (byte_1, byte_2): (u8, u8) = inx( pair_registers(sp_1, sp_2) );
@@ -91,15 +91,15 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                     pair_registers(cpu.h.value, cpu.l.value)),
                     &mut cpu.flags)
             ),
-        0x36 => return Err("Operation unimplemented"),
+        0x36 => return Err("MVI M"),
         0x37 => cpu.flags.set_flag(Flag::CY),
-        0x38 => return Err("Operation unimplemented"),
+        0x38 => return Err("NOP"),
         0x39 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             cpu.sp.address,
             &mut cpu.flags
             ),
-        0x3a => return Err("Operation unimplemented"),
+        0x3a => return Err("LDA"),
         0x3b => {
             let (sp_1, sp_2): (u8, u8) = split_register_pair(cpu.sp.address);
             let (byte_1, byte_2): (u8, u8) = dcx( pair_registers(sp_1, sp_2) );
@@ -107,7 +107,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         },
         0x3c => cpu.a.value = inr(cpu.a.value, &mut cpu.flags),
         0x3d => cpu.a.value = dcr(cpu.a.value, &mut cpu.flags),
-        0x3e => return Err("Operation unimplemented"),
+        0x3e => return Err("MVI A"),
         0x3f => cpu.flags.clear_flag(Flag::CY),
 
         // MOV OPERATIONS
@@ -265,7 +265,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xc1 => return Err("Operation unimplemented"),
+        0xc1 => return Err("POP B"),
         0xc2 => { // JNZ
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -295,7 +295,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xc5 => return Err("Operation unimplemented"),
+        0xc5 => return Err("PUSH B"),
         0xc6 => { // ADI
             cpu.a.value = add(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -336,7 +336,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xcb => return Err("Operation unimplemented"),
+        0xcb => return Err("NOP"),
         0xcc => { // CZ
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -381,7 +381,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xd1 => return Err("Operation unimplemented"),
+        0xd1 => return Err("POP D"),
         0xd2 => { // JNC
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -392,7 +392,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xd3 => return Err("Operation unimplemented"),
+        0xd3 => return Err("OUT D8"),
         0xd4 => { // CNC
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -405,7 +405,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xd5 => return Err("Operation unimplemented"),
+        0xd5 => return Err("PUSH D"),
         0xd6 => { // SUI
             cpu.a.value = sub(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -429,7 +429,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xd9 => return Err("Operation unimplemented"),
+        0xd9 => return Err("NOP"),
         0xda => { // JC
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -440,7 +440,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xdb => return Err("Operation unimplemented"),
+        0xdb => return Err("IN D8"),
         0xdc => { // CC
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -477,7 +477,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xe1 => return Err("Operation unimplemented"),
+        0xe1 => return Err("POP H"),
         0xe2 => { // JPO
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -488,7 +488,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xe3 => return Err("Operation unimplemented"),
+        0xe3 => return Err("XTHL"),
         0xe4 => { // CPO
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -501,7 +501,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xe5 => return Err("Operation unimplemented"),
+        0xe5 => return Err("PUSH H"),
         0xe6 => { // ANI
             cpu.a.value = and(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -540,7 +540,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xeb => return Err("Operation unimplemented"),
+        0xeb => return Err("XCHG"),
         0xec => { // CPE
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
