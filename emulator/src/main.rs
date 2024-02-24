@@ -25,7 +25,10 @@ fn main() {
         //  at the pc address NOT pc address + 1
 
         println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
-        let additional_bytes: u16 = cpu::dispatcher::handle_op_code(op_code, &mut cpu);
-        cpu.pc.address += additional_bytes;
+        let result = cpu::dispatcher::handle_op_code(op_code, &mut cpu);
+        match result {
+            Err(e) => println!("0x{:02x} encountered error: {}", op_code, e),
+            Ok(additional_bytes) => cpu.pc.address += additional_bytes,
+        }
     }
 }

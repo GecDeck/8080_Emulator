@@ -422,6 +422,7 @@ fn and(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // &s two registers together, sets flags based on the result, then returns the result
 
     let result: u8 = reg_1 & reg_2;
+    *flags = set_flags_from_operation(result as i16, *flags);
 
     result
 }
@@ -430,6 +431,7 @@ fn xor(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // ^s two registers together, sets flags based on the result, then returns the result
 
     let result: u8 = reg_1 ^ reg_2;
+    *flags = set_flags_from_operation(result as i16, *flags);
 
     result
 }
@@ -438,6 +440,7 @@ fn or(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // |s two registers together, sets flags based on the result, then returns the result
 
     let result: u8 = reg_1 | reg_2;
+    *flags = set_flags_from_operation(result as i16, *flags);
 
     result
 }
@@ -446,17 +449,17 @@ fn not(reg: u8, flags: &mut Flags) -> u8 {
     // gets the not of a register, sets flags based on the result, then returns the result
 
     let result: u8 = !reg;
+    *flags = set_flags_from_operation(result as i16, *flags);
 
     result
 }
 
-fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
+fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) {
     // Ge ts the difference of two registers, and sets flags based on the result
     //  The result is discarded
 
-    let result: u8 = reg_1 - reg_2;
-
-    result
+    let result: i16 = reg_1 as i16 - reg_2 as i16;
+    *flags = set_flags_from_operation(result, *flags);
 }
 
 fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {

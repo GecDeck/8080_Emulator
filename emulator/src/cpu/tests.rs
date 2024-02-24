@@ -3,6 +3,23 @@ use super::*;
 use super::dispatcher::handle_op_code;
 
 #[test]
+fn test_operation_coverage() {
+    let mut cpu: Cpu = Cpu::init();
+    let mut covered_operations: u8 = 0;
+
+    for i in 0..=0xff {
+        let result = handle_op_code(i, &mut cpu);
+        match result {
+            Err(_) => println!("0x{:02x} unimplemented", i),
+            Ok(_) => covered_operations += 1,
+        }
+    }
+
+    println!("{} operations unimplemented", 0xff - covered_operations);
+    assert_eq!(covered_operations, 0xff);
+}
+
+#[test]
 fn test_memory_rw() {
     let mut test_mem: Memory = Memory::init();
 
@@ -194,18 +211,35 @@ fn test_logical_operations() {
 
     // AND
     assert_eq!(and(0b10101010, 0b01011010, &mut cpu.flags), 0b00001010);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+    assert_eq!(and(0b10101010, 0b00000000, &mut cpu.flags), 0b00000000);
+    assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
 
     // XOR
     assert_eq!(xor(0b10101010, 0b10100000, &mut cpu.flags), 0b00001010);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+    assert_eq!(xor(0b10101010, 0b10101010, &mut cpu.flags), 0b00000000);
+    assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
 
     // OR
     assert_eq!(or(0b10101010, 0b00000101, &mut cpu.flags), 0b10101111);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+    assert_eq!(or(0b00000000, 0b00000000, &mut cpu.flags), 0b00000000);
+    assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
 
     // NOT
     assert_eq!(not(0b10101010, &mut cpu.flags), 0b01010101);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+    assert_eq!(not(0b11111111, &mut cpu.flags), 0b00000000);
+    assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
 
     // Compare
-    todo!();
+    cmp(8, 8, &mut cpu.flags);
+    assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
+    cmp(4, 1, &mut cpu.flags);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+    cmp(1, 8, &mut cpu.flags);
+    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
 
     // Rotate
     todo!();
@@ -217,7 +251,7 @@ fn test_operation_handling() {
 
     // MOV test C -> B
     cpu.c.value = 0xd4;
-    handle_op_code(0x41, &mut cpu);
+    let _ = handle_op_code(0x41, &mut cpu);
     assert_eq!(cpu.b.value, 0xd4);
 
     // MOV test C -> M
@@ -225,18 +259,18 @@ fn test_operation_handling() {
     cpu.l.value = 0xd4;
     cpu.c.value = 0xff;
 
-    handle_op_code(0x71, &mut cpu);
+    let _ = handle_op_code(0x71, &mut cpu);
     assert_eq!(cpu.memory.read_at(pair_registers(cpu.h.value, cpu.l.value)), 0xff);
 
     // MOV test M -> B
-    handle_op_code(0x46, &mut cpu);
+    let _ = handle_op_code(0x46, &mut cpu);
     assert_eq!(cpu.b.value, 0xff);
 
     // ADD test A + B -> A
     cpu.a.value = 0xf0;
     cpu.b.value = 0x0f;
 
-    handle_op_code(0x80, &mut cpu);
+    let _ = handle_op_code(0x80, &mut cpu);
     assert_eq!(cpu.a.value, 0xff);
 
     // ADC test A + M + CY -> A
@@ -248,7 +282,7 @@ fn test_operation_handling() {
     cpu.flags.set_flag(Flag::CY);
     cpu.a.value = 0x02;
 
-    handle_op_code(0x8e, &mut cpu);
+    let _ = handle_op_code(0x8e, &mut cpu);
     assert_eq!(cpu.a.value, 0x05);
     // A = 2, M = 2, CY = 1 ... = 5
 
@@ -260,7 +294,7 @@ fn test_operation_handling() {
 
     cpu.a.value = 0xff;
 
-    handle_op_code(0x96, &mut cpu);
+    let _ = handle_op_code(0x96, &mut cpu);
     assert_eq!(cpu.a.value, 0x00);
 
     // SBB test A - C - CY -> A
@@ -268,17 +302,17 @@ fn test_operation_handling() {
     cpu.c.value = 0x08;
     cpu.flags.set_flag(Flag::CY);
 
-    handle_op_code(0x99, &mut cpu);
+    let _ = handle_op_code(0x99, &mut cpu);
     assert_eq!(cpu.a.value, 0x00);
 
     // INX test SP + 1
     cpu.sp.address = 0xc3d4;
-    handle_op_code(0x33, &mut cpu);
+    let _ = handle_op_code(0x33, &mut cpu);
     assert_eq!(cpu.sp.address, 0xc3d5);
 
     // DCX test SP - 1
     cpu.sp.address = 0xc3d5;
-    handle_op_code(0x3b, &mut cpu);
+    let _ = handle_op_code(0x3b, &mut cpu);
     assert_eq!(cpu.sp.address, 0xc3d4);
 
     // INR test M + 1
@@ -286,7 +320,7 @@ fn test_operation_handling() {
     cpu.l.value = 0xd4;
     cpu.memory.write_at( pair_registers(cpu.h.value, cpu.l.value), 0x00);
 
-    handle_op_code(0x34, &mut cpu);
+    let _ = handle_op_code(0x34, &mut cpu);
     assert_eq!(cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), 0x01);
 
     // DCR M - 1
@@ -294,7 +328,7 @@ fn test_operation_handling() {
     cpu.l.value = 0xd4;
     cpu.memory.write_at( pair_registers(cpu.h.value, cpu.l.value), 0xff);
 
-    handle_op_code(0x35, &mut cpu);
+    let _ = handle_op_code(0x35, &mut cpu);
     assert_eq!(cpu.memory.read_at( pair_registers(cpu.h.value, cpu.l.value) ), 0xfe);
 
     // DAD HL + SP -> HL
@@ -302,7 +336,7 @@ fn test_operation_handling() {
     cpu.l.value = 0x01;
     cpu.sp.address = 0x0101;
 
-    handle_op_code(0x39, &mut cpu);
+    let _ = handle_op_code(0x39, &mut cpu);
     assert_eq!((cpu.h.value, cpu.l.value), (0x02, 0x02));
 
     // JMP
@@ -311,7 +345,7 @@ fn test_operation_handling() {
     cpu.memory.write_at(0x0005, 0xd4);
     cpu.memory.write_at(0x0006, 0xc3);
 
-    assert_eq!(handle_op_code(0xc3, &mut cpu), 0);
+    assert_eq!(handle_op_code(0xc3, &mut cpu), Ok(0));
     assert_eq!(cpu.pc.address, 0xc3d4);
 
     // JNZ
@@ -320,7 +354,7 @@ fn test_operation_handling() {
     cpu.memory.write_at(0x0006, 0xc3);
     cpu.flags.clear_flags();
 
-    handle_op_code(0xc2, &mut cpu);
+    let _ = handle_op_code(0xc2, &mut cpu);
     assert_eq!(cpu.pc.address, 0xc3d4);
     // Should jmp to c3d4 since Z flag is not set
 
@@ -329,7 +363,7 @@ fn test_operation_handling() {
     cpu.memory.write_at(0x0006, 0xc3);
     cpu.flags.set_flag(Flag::Z);
 
-    assert_eq!(handle_op_code(0xc2, &mut cpu), 2);
+    assert_eq!(handle_op_code(0xc2, &mut cpu), Ok(2));
     // Should return 2 additional bytes if it doesn't jmp
     assert_eq!(cpu.pc.address, 0x0005);
     // Should not jmp to c3d4 since Z flag is set
@@ -340,7 +374,7 @@ fn test_operation_handling() {
     cpu.memory.write_at(0x0005, 0xd4);
     cpu.memory.write_at(0x0006, 0xc3);
 
-    assert_eq!(handle_op_code(0xcd, &mut cpu), 0);
+    assert_eq!(handle_op_code(0xcd, &mut cpu), Ok(0));
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
     // The stack pointer should be decremented 2
@@ -349,7 +383,7 @@ fn test_operation_handling() {
     assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
     // The return address of the next instruction should be on the stack
 
-    handle_op_code(0xc9, &mut cpu);
+    let _ = handle_op_code(0xc9, &mut cpu);
     assert_eq!(cpu.pc.address, 0x0007);
     assert_eq!(cpu.sp.address, 0x2400);
     // The stack pointer should be reincremented
@@ -366,7 +400,7 @@ fn test_operation_handling() {
 
     cpu.flags.set_flag(Flag::Z);
     // Expect not to call
-    assert_eq!(handle_op_code(0xc4, &mut cpu), 2);
+    assert_eq!(handle_op_code(0xc4, &mut cpu), Ok(2));
     // Returns 2 additional bytes read if no call
 
     assert_eq!(cpu.pc.address, 0x0005);
@@ -377,7 +411,7 @@ fn test_operation_handling() {
 
     cpu.flags.clear_flags();
     // Expect call
-    assert_eq!(handle_op_code(0xc4, &mut cpu), 0);
+    assert_eq!(handle_op_code(0xc4, &mut cpu), Ok(0));
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
@@ -386,7 +420,7 @@ fn test_operation_handling() {
 
     cpu.flags.set_flag(Flag::Z);
     // Expect to not return
-    handle_op_code(0xc0, &mut cpu);
+    let _ = handle_op_code(0xc0, &mut cpu);
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
@@ -396,7 +430,7 @@ fn test_operation_handling() {
 
     cpu.flags.clear_flags();
     // Expect to return
-    handle_op_code(0xc0, &mut cpu);
+    let _ = handle_op_code(0xc0, &mut cpu);
 
     assert_eq!(cpu.pc.address, 0x0007);
     assert_eq!(cpu.sp.address, 0x2400);
@@ -408,7 +442,7 @@ fn test_operation_handling() {
     cpu.pc.address = 0x0005;
     cpu.h.value = 0xc3;
     cpu.l.value = 0xd4;
-    handle_op_code(0xe9, &mut cpu);
+    let _ = handle_op_code(0xe9, &mut cpu);
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     // PCHL is a jmp not a call
@@ -418,10 +452,45 @@ fn test_operation_handling() {
     cpu.pc.address = 0x0005;
 
     cpu.pc.address += 1;
-    handle_op_code(0xff, &mut cpu);
+    let _ = handle_op_code(0xff, &mut cpu);
 
     assert_eq!(cpu.pc.address, 0x0038);
     assert_eq!(cpu.sp.address, 0x23fe);
     assert_eq!(cpu.memory.read_at(0x2400), 0x06);
     assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+
+    // ANI
+    cpu.reset();
+    cpu.a.value = 0b10101010;
+    cpu.memory.write_at(cpu.pc.address, 0b00001111);
+
+    assert_eq!(handle_op_code(0xe6, &mut cpu), Ok(1));
+    assert_eq!(cpu.a.value, 0b00001010);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+
+    // XRI
+    cpu.reset();
+    cpu.a.value = 0b10101010;
+    cpu.memory.write_at(cpu.pc.address, 0b01011010);
+
+    assert_eq!(handle_op_code(0xee, &mut cpu), Ok(1));
+    assert_eq!(cpu.a.value, 0b11110000);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+
+    // ORI
+    cpu.reset();
+    cpu.a.value = 0b10101010;
+    cpu.memory.write_at(cpu.pc.address, 0b01010000);
+
+    assert_eq!(handle_op_code(0xf6, &mut cpu), Ok(1));
+    assert_eq!(cpu.a.value, 0b11111010);
+    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+
+    // CPI
+    cpu.reset();
+    cpu.a.value = 1;
+    cpu.memory.write_at(cpu.pc.address, 8);
+
+    assert_eq!(handle_op_code(0xfe, &mut cpu), Ok(1));
+    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
 }
