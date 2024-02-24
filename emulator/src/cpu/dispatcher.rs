@@ -68,7 +68,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x2c => cpu.l.value = inr(cpu.l.value, &mut cpu.flags),
         0x2d => cpu.l.value = dcr(cpu.l.value, &mut cpu.flags),
         0x2e => return Err("MVI L"),
-        0x2f => return Err("CMA"),
+        0x2f => cpu.a.value = !cpu.a.value,
         0x30 => return Err("NOP"),
         0x31 => return Err("LXI SP"),
         0x32 => return Err("STA"),

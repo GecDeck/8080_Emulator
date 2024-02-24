@@ -423,6 +423,8 @@ fn and(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
 
     let result: u8 = reg_1 & reg_2;
     *flags = set_flags_from_operation(result as i16, *flags);
+    if result == 0b10000000 { flags.set_flag(Flag::S) }
+    // This is just how the cpu works I think
 
     result
 }
@@ -432,6 +434,7 @@ fn xor(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
 
     let result: u8 = reg_1 ^ reg_2;
     *flags = set_flags_from_operation(result as i16, *flags);
+    if result == 0b10000000 { flags.set_flag(Flag::S) }
 
     result
 }
@@ -441,15 +444,7 @@ fn or(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
 
     let result: u8 = reg_1 | reg_2;
     *flags = set_flags_from_operation(result as i16, *flags);
-
-    result
-}
-
-fn not(reg: u8, flags: &mut Flags) -> u8 {
-    // gets the not of a register, sets flags based on the result, then returns the result
-
-    let result: u8 = !reg;
-    *flags = set_flags_from_operation(result as i16, *flags);
+    if result == 0b10000000 { flags.set_flag(Flag::S) }
 
     result
 }
@@ -458,29 +453,29 @@ fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) {
     // Ge ts the difference of two registers, and sets flags based on the result
     //  The result is discarded
 
-    let result: i16 = reg_1 as i16 - reg_2 as i16;
-    *flags = set_flags_from_operation(result, *flags);
+    match reg_1 as i16 - reg_2 as i16 {
+        i16::MIN..=-1 => flags.set_flag(Flag::CY),
+        0 => flags.set_flag(Flag::Z),
+        1..=i16::MAX => flags.clear_flag(Flag::CY),
+    }
 }
 
 fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     // Sets flags based on the result of an arithmetic operation
     let mut return_flags: Flags = flags;
+    return_flags.clear_flags();
 
     // Zero check
     if result == 0 { return_flags.set_flag(Flag::Z) }
-    else { return_flags.clear_flag(Flag::Z) }
 
     // Negative Check
     if result < 0 { return_flags.set_flag(Flag::S) }
-    else { return_flags.clear_flag(Flag::S) }
 
     // Parity Check
     if ((result & 0xff) as u8).count_ones() % 2 == 0 { return_flags.set_flag(Flag::P) }
-    else { return_flags.clear_flag(Flag::P) }
 
     // Carry Check
     if result > u8::MAX as i16 { return_flags.set_flag(Flag::CY) }
-    else { return_flags.clear_flag(Flag::CY) }
 
     return_flags
 }

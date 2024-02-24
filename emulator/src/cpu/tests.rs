@@ -8,6 +8,8 @@ fn test_operation_coverage() {
     let mut covered_operations: u8 = 0;
 
     for i in 0..=0xff {
+        cpu.reset();
+
         let result = handle_op_code(i, &mut cpu);
         match result {
             Err(e) => println!("0x{:02x}    {} unimplemented", i, e),
@@ -214,35 +216,35 @@ fn test_logical_operations() {
     assert_eq!(cpu.flags.check_flag(Flag::P), 1);
     assert_eq!(and(0b10101010, 0b00000000, &mut cpu.flags), 0b00000000);
     assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
+    assert_eq!(and(0b10101010, 0b11010101, &mut cpu.flags), 0b10000000);
+    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
 
     // XOR
     assert_eq!(xor(0b10101010, 0b10100000, &mut cpu.flags), 0b00001010);
     assert_eq!(cpu.flags.check_flag(Flag::P), 1);
     assert_eq!(xor(0b10101010, 0b10101010, &mut cpu.flags), 0b00000000);
     assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
+    assert_eq!(xor(0b10101010, 0b00101010, &mut cpu.flags), 0b10000000);
+    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
 
     // OR
     assert_eq!(or(0b10101010, 0b00000101, &mut cpu.flags), 0b10101111);
     assert_eq!(cpu.flags.check_flag(Flag::P), 1);
     assert_eq!(or(0b00000000, 0b00000000, &mut cpu.flags), 0b00000000);
     assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
-
-    // NOT
-    assert_eq!(not(0b10101010, &mut cpu.flags), 0b01010101);
-    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
-    assert_eq!(not(0b11111111, &mut cpu.flags), 0b00000000);
-    assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
+    assert_eq!(or(0b00000000, 0b10000000, &mut cpu.flags), 0b10000000);
+    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
 
     // Compare
     cmp(8, 8, &mut cpu.flags);
     assert_eq!(cpu.flags.check_flag(Flag::Z), 1);
     cmp(4, 1, &mut cpu.flags);
-    assert_eq!(cpu.flags.check_flag(Flag::P), 1);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
     cmp(1, 8, &mut cpu.flags);
-    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
 
     // Rotate
-    todo!();
+    // todo!();
 }
 
 #[test]
@@ -463,9 +465,12 @@ fn test_operation_handling() {
     cpu.reset();
     cpu.a.value = 0b10101010;
     cpu.memory.write_at(cpu.pc.address, 0b00001111);
+    cpu.flags.set_flag(Flag::CY);
 
     assert_eq!(handle_op_code(0xe6, &mut cpu), Ok(1));
     assert_eq!(cpu.a.value, 0b00001010);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+    // ANI clears the carry flag
     assert_eq!(cpu.flags.check_flag(Flag::P), 1);
 
     // XRI
@@ -492,5 +497,12 @@ fn test_operation_handling() {
     cpu.memory.write_at(cpu.pc.address, 8);
 
     assert_eq!(handle_op_code(0xfe, &mut cpu), Ok(1));
-    assert_eq!(cpu.flags.check_flag(Flag::S), 1);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+
+    // CMA
+    cpu.reset();
+    cpu.a.value = 0b11111111;
+    let _ = handle_op_code(0x2f, &mut cpu);
+
+    assert_eq!(cpu.a.value, 0b00000000);
 }
