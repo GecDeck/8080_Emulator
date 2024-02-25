@@ -244,26 +244,27 @@ fn test_logical_operations() {
     assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
 
     // Rotate
-    // Values taken from eliben.org/js8080 emulator
     cpu.reset();
-    assert_eq!(rotate_right(0x01, false, &mut cpu.flags), 0x00);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
-    assert_eq!(rotate_right(0x01, true, &mut cpu.flags), 0x80);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
-    assert_eq!(rotate_right(0x80, false, &mut cpu.flags), 0x40);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
-    assert_eq!(rotate_right(0x80, true, &mut cpu.flags), 0x40);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
-    assert_eq!(rotate_right(0x81, false, &mut cpu.flags), 0x40);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
-    assert_eq!(rotate_right(0x81, true, &mut cpu.flags), 0xc0);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
-    assert_eq!(rotate_right(0x83, false, &mut cpu.flags), 0x41);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
-    assert_eq!(rotate_right(0x83, true, &mut cpu.flags), 0xc1);
-    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    cpu.flags.set_flag(Flag::CY);
 
-    todo!();
+    // RRC
+    assert_eq!(rotate_right(0x80, false, &mut cpu.flags), 0b01000000);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+    assert_eq!(rotate_right(0x81, false, &mut cpu.flags), 0b11000000);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    // RAR
+    assert_eq!(rotate_right(0x80, true, &mut cpu.flags), 0b11000000);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+    // RLC
+    cpu.flags.set_flag(Flag::CY);
+
+    assert_eq!(rotate_left(0x01, false, &mut cpu.flags), 0b00000010);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+    assert_eq!(rotate_left(0x81, false, &mut cpu.flags), 0b00000011);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    // RAL
+    assert_eq!(rotate_left(0x01, true, &mut cpu.flags), 0b00000011);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
 }
 
 #[test]
@@ -524,4 +525,20 @@ fn test_operation_handling() {
     let _ = handle_op_code(0x2f, &mut cpu);
 
     assert_eq!(cpu.a.value, 0b00000000);
+
+    // RLC
+    cpu.reset();
+    cpu.a.value = 0x01;
+    cpu.flags.set_flag(Flag::CY);
+
+    assert_eq!(rotate_left(cpu.a.value, false, &mut cpu.flags), 0b00000010);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+
+    // RAR
+    cpu.reset();
+    cpu.a.value = 0x80;
+    cpu.flags.set_flag(Flag::CY);
+
+    assert_eq!(rotate_right(cpu.a.value, true, &mut cpu.flags), 0b11000000);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
 }

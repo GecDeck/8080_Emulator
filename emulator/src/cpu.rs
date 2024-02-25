@@ -460,36 +460,46 @@ fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) {
     }
 }
 
-fn rotate_right(reg: u8, wrap_bit_0: bool, flags: &mut Flags) -> u8 {
-    // Sets the carry bit from bit 0, rotates right, optionally wrap so bit 7 = previous bit 0
+fn rotate_right(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {
+    // Sets the carry bit from bit 0, rotates right, optionally rotates through the carry bit
     //  returns result
+
+    let mut result: u8 = reg >> 1;
+    if !through_carry { result = result | (reg << 7) }
+    else { match flags.check_flag(Flag::CY) {
+        1 => result = result | 0b10000000,
+        0 => result = result & 0b11111110,
+        _ => panic!("Check flag can only return 1 or 0"),
+    }}
 
     match reg & 0b00000001 {
         0b00000001 => flags.set_flag(Flag::CY),
         0b00000000 => flags.clear_flag(Flag::CY),
         _ => panic!("No other possible results for & 0b00000001"),
     }
-    // Sets carry flag from 0 bit
-
-    let mut result: u8 = reg >> 1;
-    if wrap_bit_0 { result = result | (reg << 7) }
+    // The carry flag is set to the low bit of the register
 
     result
 }
 
-fn rotate_left(reg: u8, wrap_bit_7: bool, flags: &mut Flags) -> u8 {
-    // Sets the carry bit from bit 7, rotates left, optionally wrap so bit 0 = previous bit 7
+fn rotate_left(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {
+    // Sets the carry bit from bit 7, rotates left, optionally rotates through the carry bit
     //  returns result
+
+    let mut result: u8 = reg << 1;
+    if !through_carry { result = result | (reg >> 7) }
+    else { match flags.check_flag(Flag::CY) {
+        1 => result = result | 0b00000001,
+        0 => result = result & 0b01111111,
+        _ => panic!("Check flag can only return 1 or 0"),
+    }}
 
     match reg & 0b10000000 {
         0b10000000 => flags.set_flag(Flag::CY),
         0b00000000 => flags.clear_flag(Flag::CY),
-        _ => panic!("No other possible results for & 0b00000001"),
+        _ => panic!("No other possible results for & 0b10000000"),
     }
-    // Sets carry flag from 0 bit
-
-    let mut result: u8 = reg << 1;
-    if wrap_bit_7 { result = result | (reg >> 7) }
+    // The carry bit is set to the high bit of the register
 
     result
 }
