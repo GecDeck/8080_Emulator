@@ -12,7 +12,7 @@ fn test_operation_coverage() {
 
         let result = handle_op_code(i, &mut cpu);
         match result {
-            Err(e) => println!("0x{:02x}    {} unimplemented", i, e),
+            Err(e) => {}, //println!("0x{:02x}    {} unimplemented", i, e),
             Ok(_) => covered_operations += 1,
         }
     }
@@ -244,7 +244,26 @@ fn test_logical_operations() {
     assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
 
     // Rotate
-    // todo!();
+    // Values taken from eliben.org/js8080 emulator
+    cpu.reset();
+    assert_eq!(rotate_right(0x01, false, &mut cpu.flags), 0x00);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    assert_eq!(rotate_right(0x01, true, &mut cpu.flags), 0x80);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    assert_eq!(rotate_right(0x80, false, &mut cpu.flags), 0x40);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+    assert_eq!(rotate_right(0x80, true, &mut cpu.flags), 0x40);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+    assert_eq!(rotate_right(0x81, false, &mut cpu.flags), 0x40);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    assert_eq!(rotate_right(0x81, true, &mut cpu.flags), 0xc0);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    assert_eq!(rotate_right(0x83, false, &mut cpu.flags), 0x41);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+    assert_eq!(rotate_right(0x83, true, &mut cpu.flags), 0xc1);
+    assert_eq!(cpu.flags.check_flag(Flag::CY), 1);
+
+    todo!();
 }
 
 #[test]

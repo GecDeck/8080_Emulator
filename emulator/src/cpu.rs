@@ -460,6 +460,40 @@ fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) {
     }
 }
 
+fn rotate_right(reg: u8, wrap_bit_0: bool, flags: &mut Flags) -> u8 {
+    // Sets the carry bit from bit 0, rotates right, optionally wrap so bit 7 = previous bit 0
+    //  returns result
+
+    match reg & 0b00000001 {
+        0b00000001 => flags.set_flag(Flag::CY),
+        0b00000000 => flags.clear_flag(Flag::CY),
+        _ => panic!("No other possible results for & 0b00000001"),
+    }
+    // Sets carry flag from 0 bit
+
+    let mut result: u8 = reg >> 1;
+    if wrap_bit_0 { result = result | (reg << 7) }
+
+    result
+}
+
+fn rotate_left(reg: u8, wrap_bit_7: bool, flags: &mut Flags) -> u8 {
+    // Sets the carry bit from bit 7, rotates left, optionally wrap so bit 0 = previous bit 7
+    //  returns result
+
+    match reg & 0b10000000 {
+        0b10000000 => flags.set_flag(Flag::CY),
+        0b00000000 => flags.clear_flag(Flag::CY),
+        _ => panic!("No other possible results for & 0b00000001"),
+    }
+    // Sets carry flag from 0 bit
+
+    let mut result: u8 = reg << 1;
+    if wrap_bit_7 { result = result | (reg >> 7) }
+
+    result
+}
+
 fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     // Sets flags based on the result of an arithmetic operation
     let mut return_flags: Flags = flags;

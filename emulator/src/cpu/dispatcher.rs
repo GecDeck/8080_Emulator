@@ -14,7 +14,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x05 => cpu.b.value = dcr(cpu.b.value, &mut cpu.flags),
         0x06 => return Err("MVI, B"),
         0x07 => return Err("RLC"),
-        0x08 => return Err("NOP"),
+        0x08 => {},
         0x09 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.b.value, cpu.c.value),
@@ -26,7 +26,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x0d => cpu.c.value = dcr(cpu.c.value, &mut cpu.flags),
         0x0e => return Err("MVI C"),
         0x0f => return Err("RRC"),
-        0x10 => return Err("NOP"),
+        0x10 => {},
         0x11 => return Err("LXI D"),
         0x12 => return Err("STAX D"),
         0x13 => (cpu.d.value, cpu.e.value) = inx( pair_registers(cpu.d.value, cpu.c.value) ),
@@ -34,7 +34,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x15 => cpu.d.value = dcr(cpu.d.value, &mut cpu.flags),
         0x16 => return Err("MVI D"),
         0x17 => return Err("RAL"),
-        0x18 => return Err("NOP"),
+        0x18 => {},
         0x19 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.d.value, cpu.e.value),
@@ -46,7 +46,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x1d => cpu.e.value = dcr(cpu.e.value, &mut cpu.flags),
         0x1e => return Err("MVI E"),
         0x1f => return Err("RAR"),
-        0x20 => return Err("NOP"),
+        0x20 => {},
         0x21 => return Err("LXI H"),
         0x22 => return Err("SHLD"),
         0x23 => (cpu.h.value, cpu.l.value) = inx( pair_registers(cpu.h.value, cpu.l.value) ),
@@ -54,7 +54,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x25 => cpu.h.value = dcr(cpu.h.value, &mut cpu.flags),
         0x26 => return Err("MVI H"),
         0x27 => return Err("DAA"),
-        0x28 => return Err("NOP"),
+        0x28 => {},
         0x29 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             pair_registers(cpu.h.value, cpu.l.value),
@@ -69,7 +69,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x2d => cpu.l.value = dcr(cpu.l.value, &mut cpu.flags),
         0x2e => return Err("MVI L"),
         0x2f => cpu.a.value = !cpu.a.value,
-        0x30 => return Err("NOP"),
+        0x30 => {},
         0x31 => return Err("LXI SP"),
         0x32 => return Err("STA"),
         0x33 => {
@@ -93,7 +93,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             ),
         0x36 => return Err("MVI M"),
         0x37 => cpu.flags.set_flag(Flag::CY),
-        0x38 => return Err("NOP"),
+        0x38 => {},
         0x39 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),
             cpu.sp.address,
