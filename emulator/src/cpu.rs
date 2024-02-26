@@ -167,6 +167,7 @@ pub struct Cpu {
     pub pc: AddressPointer,
     pub memory: Memory,
     flags: Flags,
+    interrupt_enabled: bool,
 }
 impl Cpu {
     pub fn init() -> Self {
@@ -183,22 +184,13 @@ impl Cpu {
             pc: AddressPointer::at(0x0000),
             memory: Memory::init(),
             flags: Flags::default(),
+            interrupt_enabled: true,
         }
     }
 
     pub fn reset(&mut self) {
         // Resets all the values of the cpu
-        self.a = Register::default();
-        self.b = Register::default();
-        self.c = Register::default();
-        self.d = Register::default();
-        self.e = Register::default();
-        self.h = Register::default();
-        self.l = Register::default();
-        self.sp = AddressPointer::at(0x2400);
-        self.pc = AddressPointer::at(0x0000);
-        self.memory = Memory::init();
-        self.flags = Flags::default();
+        *self = Cpu::init();
     }
 
     pub fn check_stack_overflow(&self) -> bool {

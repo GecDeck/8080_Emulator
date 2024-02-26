@@ -165,8 +165,8 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         0x73 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.e.value),
         0x74 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.h.value),
         0x75 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.l.value),
-        0x76 => return Err("HALT"),
-        // TODO: should halt panic? Need to figure out what halt does
+        0x76 => return Ok(255),
+        // Halt will return a unique u8 so main knows to exit
         0x77 => cpu.memory.write_at(pair_registers(cpu.h.value, cpu.l.value), cpu.a.value),
         0x78 => cpu.a.value = cpu.b.value,
         0x79 => cpu.a.value = cpu.c.value,
@@ -336,7 +336,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xcb => return Err("NOP"),
+        0xcb => {},
         0xcc => { // CZ
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -392,7 +392,11 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xd3 => return Err("OUT D8"),
+        0xd3 => { // OUT
+            return Ok(1);
+            // Just returns 1 additional byte read for now
+            // TODO: implement this
+        },
         0xd4 => { // CNC
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -429,7 +433,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xd9 => return Err("NOP"),
+        0xd9 => {},
         0xda => { // JC
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -440,7 +444,11 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xdb => return Err("IN D8"),
+        0xdb => { // IN
+            return Ok(1);
+            // Just returns 1 additional byte read for now
+            // TODO: implement this
+        },
         0xdc => { // CC
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -453,7 +461,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xdd => return Err("NOP"),
+        0xdd => {},
         0xde => { // SBI
             cpu.a.value = sbb(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -553,7 +561,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xed => return Err("NOP"),
+        0xed => {},
         0xee => { // XRI
             cpu.a.value = xor(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -588,7 +596,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xf3 => return Err("DI"),
+        0xf3 => cpu.interrupt_enabled = false,
         0xf4 => { // CP
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -636,7 +644,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xfb => return Err("EI"),
+        0xfb => cpu.interrupt_enabled = true,
         0xfc => { // CM
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -649,7 +657,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xfd => return Err("NOP"),
+        0xfd => {},
         0xfe => { // CPI
             cmp(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);

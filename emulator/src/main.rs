@@ -3,7 +3,7 @@ use std::env;
 use emulator::cpu;
 use emulator::cpu::Cpu;
 
-fn main() {
+fn main() -> Result<(), u8> {
     let mut cpu: Cpu = Cpu::init();
     // Initialize Cpu
 
@@ -28,7 +28,11 @@ fn main() {
         let result = cpu::dispatcher::handle_op_code(op_code, &mut cpu);
         match result {
             Err(e) => println!("0x{:02x} encountered error: {}", op_code, e),
-            Ok(additional_bytes) => cpu.pc.address += additional_bytes,
+            Ok(additional_bytes) => match additional_bytes {
+                255 => return Ok(()),
+                // Only halt should return 255
+                _ => cpu.pc.address += additional_bytes,
+            },
         }
     }
 }

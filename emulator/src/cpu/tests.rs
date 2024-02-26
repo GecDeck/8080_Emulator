@@ -12,7 +12,7 @@ fn test_operation_coverage() {
 
         let result = handle_op_code(i, &mut cpu);
         match result {
-            Err(e) => {}, //println!("0x{:02x}    {} unimplemented", i, e),
+            Err(e) => println!("0x{:02x}    {} unimplemented", i, e),
             Ok(_) => covered_operations += 1,
         }
     }
@@ -541,4 +541,11 @@ fn test_operation_handling() {
 
     assert_eq!(rotate_right(cpu.a.value, true, &mut cpu.flags), 0b11000000);
     assert_eq!(cpu.flags.check_flag(Flag::CY), 0);
+
+    // DI
+    cpu.reset();
+    cpu.interrupt_enabled = true;
+
+    let _ = handle_op_code(0xf3, &mut cpu);
+    assert!(!cpu.interrupt_enabled);
 }
