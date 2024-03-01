@@ -7,12 +7,18 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
     match op_code {
         0x00 => {},
         // NOP
-        0x01 => return Err("LXI B"),
-        0x02 => return Err("STAX B"),
+        0x01 => { // LXI B
+            (cpu.b.value, cpu.c.value) = (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address));
+            return Ok(2);
+        },
+        0x02 => cpu.memory.write_at(pair_registers(cpu.b.value, cpu.c.value), cpu.a.value),
         0x03 => (cpu.b.value, cpu.c.value) = inx( pair_registers(cpu.b.value, cpu.c.value) ),
         0x04 => cpu.b.value = inr(cpu.b.value, &mut cpu.flags),
         0x05 => cpu.b.value = dcr(cpu.b.value, &mut cpu.flags),
-        0x06 => return Err("MVI, B"),
+        0x06 => { // MVI B
+            cpu.b.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x07 => cpu.a.value = rotate_left(cpu.a.value, false, &mut cpu.flags),
         0x08 => {},
         0x09 => (cpu.h.value, cpu.l.value) = dad(
@@ -20,19 +26,28 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             pair_registers(cpu.b.value, cpu.c.value),
             &mut cpu.flags
             ),
-        0x0a => return Err("LDAX B"),
+        0x0a => cpu.a.value = cpu.memory.read_at(pair_registers(cpu.b.value, cpu.c.value)),
         0x0b => (cpu.b.value, cpu.c.value) = dcx( pair_registers(cpu.b.value, cpu.c.value) ),
         0x0c => cpu.c.value = inr(cpu.c.value, &mut cpu.flags),
         0x0d => cpu.c.value = dcr(cpu.c.value, &mut cpu.flags),
-        0x0e => return Err("MVI C"),
+        0x0e => { // MVI C
+            cpu.c.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x0f => cpu.a.value = rotate_right(cpu.a.value, false, &mut cpu.flags),
         0x10 => {},
-        0x11 => return Err("LXI D"),
-        0x12 => return Err("STAX D"),
+        0x11 => { // LXI D
+            (cpu.d.value, cpu.e.value) = (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address));
+            return Ok(2);
+        },
+        0x12 => cpu.memory.write_at(pair_registers(cpu.d.value, cpu.e.value), cpu.a.value),
         0x13 => (cpu.d.value, cpu.e.value) = inx( pair_registers(cpu.d.value, cpu.c.value) ),
         0x14 => cpu.d.value = inr(cpu.d.value, &mut cpu.flags),
         0x15 => cpu.d.value = dcr(cpu.d.value, &mut cpu.flags),
-        0x16 => return Err("MVI D"),
+        0x16 => { // MVI D
+            cpu.d.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x17 => cpu.a.value = rotate_left(cpu.a.value, true, &mut cpu.flags),
         0x18 => {},
         0x19 => (cpu.h.value, cpu.l.value) = dad(
@@ -40,19 +55,35 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             pair_registers(cpu.d.value, cpu.e.value),
             &mut cpu.flags
             ),
-        0x1a => return Err("LDAX D"),
+        0x1a => cpu.a.value = cpu.memory.read_at(pair_registers(cpu.b.value, cpu.c.value)),
         0x1b => (cpu.d.value, cpu.e.value) = dcx( pair_registers(cpu.d.value, cpu.e.value) ),
         0x1c => cpu.e.value = inr(cpu.e.value, &mut cpu.flags),
         0x1d => cpu.e.value = dcr(cpu.e.value, &mut cpu.flags),
-        0x1e => return Err("MVI E"),
+        0x1e => { // MVI E
+            cpu.e.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x1f => cpu.a.value = rotate_right(cpu.a.value, true, &mut cpu.flags),
         0x20 => {},
-        0x21 => return Err("LXI H"),
-        0x22 => return Err("SHLD"),
+        0x21 => { // LXI H
+            (cpu.h.value, cpu.l.value) = (cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address));
+            return Ok(2);
+        },
+        0x22 => { // SHLD
+            let addr: u16 = pair_registers(
+                cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address)
+                );
+            cpu.memory.write_at(addr, cpu.l.value);
+            cpu.memory.write_at(addr + 1, cpu.h.value);
+            return Ok(2);
+        },
         0x23 => (cpu.h.value, cpu.l.value) = inx( pair_registers(cpu.h.value, cpu.l.value) ),
         0x24 => cpu.h.value = inr(cpu.h.value, &mut cpu.flags),
         0x25 => cpu.h.value = dcr(cpu.h.value, &mut cpu.flags),
-        0x26 => return Err("MVI H"),
+        0x26 => { // MVI H
+            cpu.h.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x27 => return Err("DAA"),
         0x28 => {},
         0x29 => (cpu.h.value, cpu.l.value) = dad(
@@ -63,15 +94,36 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         // This is documented as HL = HL + HI
         //  But I think it's supposed to just add HL to itself? I don't what what I means
         //  TODO: find out what I means
-        0x2a => return Err("LHLD"),
+        0x2a => { // LHLD
+            let addr: u16 = pair_registers(
+                cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address)
+                );
+            cpu.l.value = cpu.memory.read_at(addr);
+            cpu.h.value = cpu.memory.read_at(addr + 1);
+            return Ok(2);
+        },
         0x2b => (cpu.h.value, cpu.l.value) = dcx( pair_registers(cpu.h.value, cpu.l.value) ),
         0x2c => cpu.l.value = inr(cpu.l.value, &mut cpu.flags),
         0x2d => cpu.l.value = dcr(cpu.l.value, &mut cpu.flags),
-        0x2e => return Err("MVI L"),
+        0x2e => { // MVI L
+            cpu.l.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x2f => cpu.a.value = !cpu.a.value,
         0x30 => {},
-        0x31 => return Err("LXI SP"),
-        0x32 => return Err("STA"),
+        0x31 => { // LXI SP
+            cpu.sp.address = pair_registers(cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address));
+            return Ok(2);
+        },
+        0x32 => { // STA
+            cpu.memory.write_at(
+                pair_registers(
+                    cpu.memory.read_at(cpu.pc.address + 1),
+                    cpu.memory.read_at(cpu.pc.address)),
+                cpu.a.value
+                );
+            return Ok(2);
+        },
         0x33 => {
             let (sp_1, sp_2): (u8, u8) = split_register_pair(cpu.sp.address);
             let (byte_1, byte_2): (u8, u8) = inx( pair_registers(sp_1, sp_2) );
@@ -91,7 +143,13 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                     pair_registers(cpu.h.value, cpu.l.value)),
                     &mut cpu.flags)
             ),
-        0x36 => return Err("MVI M"),
+        0x36 => { // MVI M
+            cpu.memory.write_at(
+                pair_registers(cpu.h.value, cpu.l.value),
+                cpu.memory.read_at(cpu.pc.address)
+                );
+            return Ok(1);
+        },
         0x37 => cpu.flags.set_flag(Flag::CY),
         0x38 => {},
         0x39 => (cpu.h.value, cpu.l.value) = dad(
@@ -99,7 +157,12 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             cpu.sp.address,
             &mut cpu.flags
             ),
-        0x3a => return Err("LDA"),
+        0x3a => { // LDA
+            cpu.a.value = cpu.memory.read_at(
+                pair_registers(cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address))
+                );
+            return Ok(2);
+        },
         0x3b => {
             let (sp_1, sp_2): (u8, u8) = split_register_pair(cpu.sp.address);
             let (byte_1, byte_2): (u8, u8) = dcx( pair_registers(sp_1, sp_2) );
@@ -107,7 +170,10 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         },
         0x3c => cpu.a.value = inr(cpu.a.value, &mut cpu.flags),
         0x3d => cpu.a.value = dcr(cpu.a.value, &mut cpu.flags),
-        0x3e => return Err("MVI A"),
+        0x3e => { // MVI A
+            cpu.a.value = cpu.memory.read_at(cpu.pc.address);
+            return Ok(1);
+        },
         0x3f => cpu.flags.clear_flag(Flag::CY),
 
         // MOV OPERATIONS

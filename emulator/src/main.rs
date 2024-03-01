@@ -27,7 +27,7 @@ fn main() -> Result<(), u8> {
         println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
         let result = cpu::dispatcher::handle_op_code(op_code, &mut cpu);
         match result {
-            Err(e) => println!("0x{:02x} encountered error: {}", op_code, e),
+            Err(e) => panic!(""),// println!("0x{:02x} encountered error: {}", op_code, e),
             Ok(additional_bytes) => match additional_bytes {
                 255 => return Ok(()),
                 // Only halt should return 255

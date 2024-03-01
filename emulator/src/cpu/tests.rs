@@ -548,4 +548,48 @@ fn test_operation_handling() {
 
     let _ = handle_op_code(0xf3, &mut cpu);
     assert!(!cpu.interrupt_enabled);
+
+    // MVI M
+    cpu.reset();
+    cpu.h.value = 0xc3;
+    cpu.l.value = 0xd4;
+    cpu.memory.write_at(cpu.pc.address, 0xff);
+
+    assert_eq!(handle_op_code(0x36, &mut cpu), Ok(1));
+    assert_eq!(cpu.memory.read_at(0xc3d4), 0xff);
+
+    // LXI SP
+    cpu.reset();
+    cpu.memory.write_at(cpu.pc.address, 0xff);
+    cpu.memory.write_at(cpu.pc.address + 1, 0x23);
+
+    assert_eq!(handle_op_code(0x31, &mut cpu), Ok(2));
+    assert_eq!(cpu.sp.address, 0x23ff);
+
+    // STA & LDA
+    cpu.reset();
+    cpu.a.value = 0xff;
+    cpu.memory.write_at(cpu.pc.address + 1, 0xc3);
+    cpu.memory.write_at(cpu.pc.address, 0xd4);
+
+    assert_eq!(handle_op_code(0x32, &mut cpu), Ok(2));
+    assert_eq!(cpu.memory.read_at(0xc3d4), 0xff);
+
+    assert_eq!(handle_op_code(0x3a, &mut cpu), Ok(2));
+    assert_eq!(cpu.a.value, 0xff);
+
+    // SHLD & LHLD
+    cpu.reset();
+    cpu.h.value = 0xee;
+    cpu.l.value = 0xff;
+    cpu.memory.write_at(cpu.pc.address + 1, 0xc3);
+    cpu.memory.write_at(cpu.pc.address, 0xd4);
+
+    assert_eq!(handle_op_code(0x22, &mut cpu), Ok(2));
+    assert_eq!(cpu.memory.read_at(0xc3d4), 0xff);
+    assert_eq!(cpu.memory.read_at(0xc3d5), 0xee);
+
+    assert_eq!(handle_op_code(0x2a, &mut cpu), Ok(2));
+    assert_eq!(cpu.h.value, 0xee);
+    assert_eq!(cpu.l.value, 0xff);
 }
