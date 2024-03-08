@@ -69,8 +69,8 @@ fn test_push_pop() {
     // Push
     push((0xd4, 0xc3), &mut sp, &mut memory);
     assert_eq!(sp.address, 0x23fe);
-    assert_eq!(memory.read_at(0x2400), 0xd4);
-    assert_eq!(memory.read_at(0x23ff), 0xc3);
+    assert_eq!(memory.read_at(0x23ff), 0xd4);
+    assert_eq!(memory.read_at(0x23fe), 0xc3);
 
     // Pop
     assert_eq!(pop(&mut sp, &mut memory), (0xd4, 0xc3));
@@ -401,8 +401,8 @@ fn test_operation_handling() {
     assert_eq!(cpu.sp.address, 0x23fe);
     // The stack pointer should be decremented 2
 
-    assert_eq!(cpu.memory.read_at(0x2400), 0x07);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x07);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
     // The return address of the next instruction should be on the stack
 
     let _ = handle_op_code(0xc9, &mut cpu);
@@ -437,8 +437,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
-    assert_eq!(cpu.memory.read_at(0x2400), 0x07);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x07);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
 
     cpu.flags.set_flag(Flag::Z);
     // Expect to not return
@@ -446,8 +446,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
-    assert_eq!(cpu.memory.read_at(0x2400), 0x07);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x07);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
     // Nothing should change if not returning
 
     cpu.flags.clear_flags();
@@ -456,8 +456,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0x0007);
     assert_eq!(cpu.sp.address, 0x2400);
-    assert_eq!(cpu.memory.read_at(0x2400), 0x00);
     assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
 
     // PCHL
     cpu.reset();
@@ -478,8 +478,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0x0038);
     assert_eq!(cpu.sp.address, 0x23fe);
-    assert_eq!(cpu.memory.read_at(0x2400), 0x06);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x06);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
 
     // ANI
     cpu.reset();

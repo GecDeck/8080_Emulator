@@ -385,8 +385,8 @@ fn ret(condition: Option<bool>, stack_pointer: &mut AddressPointer, memory: &mut
 fn push(data_bytes: (u8, u8), stack_pointer: &mut AddressPointer, memory: &mut Memory) {
     // Puts some data onto the stack
 
-    memory.write_at(stack_pointer.address, data_bytes.0);
-    memory.write_at(stack_pointer.address - 1, data_bytes.1);
+    memory.write_at(stack_pointer.address - 1, data_bytes.0);
+    memory.write_at(stack_pointer.address - 2, data_bytes.1);
     // d4 c3 will go in as d4 c3
 
     stack_pointer.address -= 2;
@@ -396,12 +396,12 @@ fn push(data_bytes: (u8, u8), stack_pointer: &mut AddressPointer, memory: &mut M
 fn pop(stack_pointer: &mut AddressPointer, memory: &mut Memory) -> (u8, u8) {
     // Returns the data at the top of the stack
 
-    let byte_1 = memory.read_at(stack_pointer.address + 2);
-    let byte_2 = memory.read_at(stack_pointer.address + 1);
+    let byte_1 = memory.read_at(stack_pointer.address + 1);
+    let byte_2 = memory.read_at(stack_pointer.address);
     // Find two bytes before stack pointer
 
     memory.write_at(stack_pointer.address + 1, 0x00);
-    memory.write_at(stack_pointer.address + 2, 0x00);
+    memory.write_at(stack_pointer.address, 0x00);
     // Zeroes memory, probably not necessary but nice for cleanliness and debugging
 
     stack_pointer.address += 2;
