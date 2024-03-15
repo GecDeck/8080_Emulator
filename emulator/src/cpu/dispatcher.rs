@@ -331,7 +331,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xc1 => return Err("POP B"),
+        0xc1 => (cpu.b.value, cpu.c.value) = pop(&mut cpu.sp, &mut cpu.memory),
         0xc2 => { // JNZ
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -361,7 +361,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xc5 => return Err("PUSH B"),
+        0xc5 => push((cpu.b.value, cpu.c.value), &mut cpu.sp, &mut cpu.memory),
         0xc6 => { // ADI
             cpu.a.value = add(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -447,7 +447,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xd1 => return Err("POP D"),
+        0xd1 => (cpu.d.value, cpu.e.value) = pop(&mut cpu.sp, &mut cpu.memory),
         0xd2 => { // JNC
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -475,7 +475,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xd5 => return Err("PUSH D"),
+        0xd5 => push((cpu.d.value, cpu.e.value), &mut cpu.sp, &mut cpu.memory),
         0xd6 => { // SUI
             cpu.a.value = sub(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -551,7 +551,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xe1 => return Err("POP H"),
+        0xe1 => (cpu.h.value, cpu.l.value) = pop(&mut cpu.sp, &mut cpu.memory),
         0xe2 => { // JPO
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -562,7 +562,11 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xe3 => return Err("XTHL"),
+        0xe3 => { //XTHL
+            let (h, l): (u8, u8) = pop(&mut cpu.sp, &mut cpu.memory);
+            push((cpu.h.value, cpu.l.value), &mut cpu.sp, &mut cpu.memory);
+            (cpu.h.value, cpu.l.value) = (h, l);
+        },
         0xe4 => { // CPO
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -575,7 +579,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xe5 => return Err("PUSH H"),
+        0xe5 => push((cpu.h.value, cpu.l.value), &mut cpu.sp, &mut cpu.memory),
         0xe6 => { // ANI
             cpu.a.value = and(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -614,7 +618,10 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xeb => return Err("XCHG"),
+        0xeb => { // XCHG
+            (cpu.h.value, cpu.d.value) = swap_registers(cpu.h.value, cpu.d.value);
+            (cpu.l.value, cpu.e.value) = swap_registers(cpu.l.value, cpu.e.value);
+        },
         0xec => { // CPE
             let call_address: Option<u16> = call(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -651,7 +658,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xf1 => return Err("POP PSW"),
+        0xf1 => (cpu.a.value, cpu.flags.flags) = pop(&mut cpu.sp, &mut cpu.memory),
         0xf2 => { // JP
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),
@@ -675,7 +682,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => return Ok(2),
             };
         },
-        0xf5 => return Err("PUSH PSW"),
+        0xf5 => push((cpu.a.value, cpu.flags.flags), &mut cpu.sp, &mut cpu.memory),
         0xf6 => { // ORI
             cpu.a.value = or(cpu.a.value, cpu.memory.read_at(cpu.pc.address), &mut cpu.flags);
             return Ok(1);
@@ -699,7 +706,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
                 None => { return Ok(0) },
             };
         },
-        0xf9 => return Err("SPHL"),
+        0xf9 => cpu.sp.address = pair_registers(cpu.h.value, cpu.l.value),
         0xfa => { // JM
             let jmp_address: Option<u16> = jmp(
                 (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1)),

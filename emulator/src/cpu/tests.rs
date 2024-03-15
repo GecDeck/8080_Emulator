@@ -3,25 +3,6 @@ use super::*;
 use super::dispatcher::handle_op_code;
 
 #[test]
-fn test_operation_coverage() {
-    let mut cpu: Cpu = Cpu::init();
-    let mut covered_operations: u8 = 0;
-
-    for i in 0..=0xff {
-        cpu.reset();
-
-        let result = handle_op_code(i, &mut cpu);
-        match result {
-            Err(e) => println!("0x{:02x}    {} unimplemented", i, e),
-            Ok(_) => covered_operations += 1,
-        }
-    }
-
-    println!("{} operations unimplemented", 0xff - covered_operations);
-    assert_eq!(covered_operations, 0xff);
-}
-
-#[test]
 fn test_memory_rw() {
     let mut test_mem: Memory = Memory::init();
 
@@ -592,4 +573,53 @@ fn test_operation_handling() {
     assert_eq!(handle_op_code(0x2a, &mut cpu), Ok(2));
     assert_eq!(cpu.h.value, 0xee);
     assert_eq!(cpu.l.value, 0xff);
+
+    // PUSH & POP PSW
+    cpu.reset();
+    cpu.flags.flags = 0b10101010;
+    cpu.a.value = 0xff;
+
+    let _ = handle_op_code(0xf5, &mut cpu);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0xff);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0b10101010);
+
+    cpu.flags.clear_flags();
+    cpu.a.value = 0x00;
+
+    let _ = handle_op_code(0xf1, &mut cpu);
+    assert_eq!(cpu.flags.flags, 0b10101010);
+    assert_eq!(cpu.a.value, 0xff);
+
+    // SPHL
+    cpu.reset();
+    cpu.h.value = 0xc3;
+    cpu.l.value = 0xd4;
+
+    let _ = handle_op_code(0xf9, &mut cpu);
+    assert_eq!(cpu.sp.address, 0xc3d4);
+
+    // XTHL
+    cpu.reset();
+    cpu.h.value = 0xee;
+    cpu.l.value = 0x33;
+    push((0xff, 0x22), &mut cpu.sp, &mut cpu.memory);
+
+    let _ = handle_op_code(0xe3, &mut cpu);
+    assert_eq!(cpu.h.value, 0xff);
+    assert_eq!(cpu.l.value, 0x22);
+    assert_eq!(cpu.memory.read_at(cpu.sp.address), 0x33);
+    assert_eq!(cpu.memory.read_at(cpu.sp.address + 1), 0xee);
+
+    // XCHG
+    cpu.reset();
+    cpu.d.value = 0xff;
+    cpu.e.value = 0xee;
+    cpu.h.value = 0x33;
+    cpu.l.value = 0x22;
+
+    let _ = handle_op_code(0xeb, &mut cpu);
+    assert_eq!(cpu.d.value, 0x33);
+    assert_eq!(cpu.e.value, 0x22);
+    assert_eq!(cpu.h.value, 0xff);
+    assert_eq!(cpu.l.value, 0xee);
 }

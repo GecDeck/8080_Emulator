@@ -532,3 +532,7 @@ fn split_register_pair(reg_pair: u16) -> (u8, u8) {
 
     (byte_1, byte_2)
 }
+
+fn swap_registers(reg_1: u8, reg_2: u8) -> (u8, u8) {
+    (reg_2, reg_1)
+}
