@@ -459,9 +459,8 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             };
         },
         0xd3 => { // OUT
-            return Ok(1);
-            // Just returns 1 additional byte read for now
-            // TODO: implement this
+            // This opcode and the opcode for IN will not be handled here
+            panic!("OUT should have been handled by the hardware module");
         },
         0xd4 => { // CNC
             let call_address: Option<u16> = call(
@@ -511,9 +510,8 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             };
         },
         0xdb => { // IN
-            return Ok(1);
-            // Just returns 1 additional byte read for now
-            // TODO: implement this
+            // This opcode and the opcode for OUT will not be handled here
+            panic!("IN should have been handled by the hardware module");
         },
         0xdc => { // CC
             let call_address: Option<u16> = call(

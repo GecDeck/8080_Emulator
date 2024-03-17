@@ -2,9 +2,12 @@ use std::env;
 
 use emulator::cpu;
 use emulator::cpu::Cpu;
+use emulator::hardware;
+use emulator::hardware::Hardware;
 
 fn main() -> Result<(), u8> {
     let mut cpu: Cpu = Cpu::init();
+    let mut hardware: Hardware = Hardware::init();
     // Initialize Cpu
 
     let args: Vec<String> = env::args().collect();
@@ -24,8 +27,23 @@ fn main() -> Result<(), u8> {
         //  when handling operations that read additional bytes, the first byte to be read will be
         //  at the pc address NOT pc address + 1
 
-        println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
-        let result = cpu::dispatcher::handle_op_code(op_code, &mut cpu);
+        // println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
+
+        let result = match op_code {
+            0xdb | 0xd3 => { // IN & OUT
+                // IO is handled by the hardware module not the cpu
+                // For IN operations handle_io returns the value read from the port
+                let port_byte: u8 = cpu.memory.read_at(cpu.pc.address);
+                match hardware::handle_io(op_code, &mut hardware, port_byte, cpu.a.value) {
+                    Some(value) => cpu.a.value = value,
+                    None => {},
+                }
+                Ok(1)
+                // IN & OUT always read one additional byte
+            },
+            _ => cpu::dispatcher::handle_op_code(op_code, &mut cpu)
+        };
+
         match result {
             Err(e) => {
                 println!("0x{:02x} encountered error: {}", op_code, e);

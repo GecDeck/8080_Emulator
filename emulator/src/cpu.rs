@@ -3,14 +3,15 @@ use std::fs;
 mod tests;
 pub mod dispatcher;
 
-// HARDWARE
-
 const STACK_MIN: u16 = 0x2001;
 // This should be where the minimum stack address is
 
+// CPU HARDWARE
+
 #[derive(Clone, Copy)]
 pub struct Register {
-    value: u8,
+    pub value: u8,
+    // Value is public so it can be accessed from main
 }
 impl Register {
     pub fn new() -> Self {
@@ -156,7 +157,8 @@ impl Default for Flags {
 
 #[derive(Clone, Copy)]
 pub struct Cpu {
-    a: Register,
+    pub a: Register,
+    // A is public so it can be accessed from main
     b: Register,
     c: Register,
     d: Register,
