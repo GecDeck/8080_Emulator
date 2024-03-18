@@ -1,5 +1,3 @@
-use crate::cpu::Cpu;
-
 mod tests;
 
 #[derive(Debug, Clone, Copy)]
