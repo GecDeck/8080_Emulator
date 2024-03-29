@@ -1,3 +1,5 @@
+use raylib::prelude::*;
+
 use std::env;
 
 use emulator::cpu;
@@ -5,7 +7,17 @@ use emulator::cpu::Cpu;
 use emulator::hardware;
 use emulator::hardware::Hardware;
 
+const ON_COLOUR: Color = Color::WHITE;
+const OFF_COLOUR: Color = Color::BLACK;
+
+const DEBUG_TEXT_SIZE: i32 = 20;
+
 fn main() -> Result<(), u8> {
+    let (mut raylib_handle, thread) = raylib::init()
+        .size(640, 480)
+        .title("Space Invaders")
+        .build();
+
     let mut cpu: Cpu = Cpu::init();
     let mut hardware: Hardware = Hardware::init();
     // Initialize Cpu
@@ -20,7 +32,11 @@ fn main() -> Result<(), u8> {
     cpu.memory.load_rom(file_path);
     // Loads Rom into memory
 
-    loop {
+    while !raylib_handle.window_should_close() {
+
+        // UPDATE
+        hardware::input::read_input(&raylib_handle, &mut hardware, hardware::input::InputConfig::default());
+
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
         cpu.pc.address += 1;
         // Important to remember pc address is incremented before op code is handled
@@ -55,5 +71,19 @@ fn main() -> Result<(), u8> {
                 _ => cpu.pc.address += additional_bytes,
             },
         }
+
+        // RENDER
+
+        let mut draw_handle = raylib_handle.begin_drawing(&thread);
+
+        draw_handle.clear_background(OFF_COLOUR);
+
+        // Input Debug
+        let input_1: String = format!("0b{:08b}", hardware.debug_input1());
+        draw_handle.draw_text(&input_1, 12, 12, DEBUG_TEXT_SIZE, ON_COLOUR);
+        let input_2: String = format!("0b{:08b}", hardware.debug_input2());
+        draw_handle.draw_text(&input_2, 12, 32, DEBUG_TEXT_SIZE, ON_COLOUR);
     }
+
+    Ok(())
 }

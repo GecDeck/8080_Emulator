@@ -1,4 +1,5 @@
 mod tests;
+pub mod input;
 
 #[derive(Debug, Clone, Copy)]
 enum Port {
@@ -81,6 +82,13 @@ impl Hardware {
     pub fn reset(&mut self) {
         // Resets all the values of the cpu
         *self = Hardware::default();
+    }
+
+    pub fn debug_input1(&self) -> u8 {
+        self.ports.input_1
+    }
+    pub fn debug_input2(&self) -> u8 {
+        self.ports.input_2
     }
 }
 impl Default for Hardware {
