@@ -100,20 +100,32 @@ fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThrea
     draw_handle.draw_text(&input_1, 0, 400 + DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
     let input_2: String = format!("0b{:08b}", hardware.debug_input2());
     draw_handle.draw_text(&input_2, 0, 400 + 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    // CPU Debug
+    let stack_pointer: String = format!("0x{:04x}", cpu.debug_stack_pointer());
+    draw_handle.draw_text(&stack_pointer, 0, 400 + 3*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    let program_counter: String = format!("0x{:04x}", cpu.debug_program_counter());
+    draw_handle.draw_text(&program_counter, 0, 400 + 4*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+
 
     // Game Rendering
-    draw_handle.draw_rectangle(0, 0, 224, 256, Color::BLUE);
+    let game_x_offset: usize = 848;
+    let game_y_offset: usize = 412;
+    draw_handle.draw_rectangle(game_x_offset as i32, game_y_offset as i32, 224, 256, Color::BLUE);
 
-    // The following code is stolen from github.com/kurtjd/space-invaders-emulator/
-    for i in 0..7168 {
-        let byte = cpu.memory.read_at(0x2400 + i);
-        let y = 256 - (i % 32) * 8;
-        let x = i / 32;
-
-        for k in 0..8 {
-            if byte & (0x01 << k) == (0x01 << k) {
-                draw_handle.draw_pixel(x as i32, y as i32, ON_COLOUR);
+    let vram: &[u8] = cpu.memory.read_vram();
+    for y in 0..256 {
+        for x in 0..28 {
+            let byte: u8 = vram[x + y];
+            for b in 0..8 {
+                if byte & 0x01 << b == 0x01 << b {
+                    draw_handle.draw_pixel((((x * 8) + b) + game_x_offset) as i32, (y + game_y_offset) as i32, ON_COLOUR);
+                }
             }
+
         }
     }
+
+    // cpu::generate_interrupt(0xd7, cpu);
+    // This will call over and over without stopping
+    // TODO: Need to make it do things and return before its called again
 }

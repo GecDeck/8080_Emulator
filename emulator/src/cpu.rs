@@ -56,8 +56,8 @@ impl Memory {
         }
     }
 
-    pub fn read_vram(&self) -> Vec<u8> {
-        self.held_memory[0x2400..=0x3fff].to_vec()
+    pub fn read_vram(&self) -> &[u8] {
+        &self.held_memory[0x2400..=0x3fff]
     }
 
     pub fn read_at(&self, addr: u16) -> u8 {
@@ -209,6 +209,13 @@ impl Cpu {
             return true;
         }
         false
+    }
+
+    pub fn debug_stack_pointer(&self) -> u16 {
+        self.sp.address
+    }
+    pub fn debug_program_counter(&self) -> u16 {
+        self.pc.address
     }
 }
 
@@ -545,11 +552,8 @@ fn swap_registers(reg_1: u8, reg_2: u8) -> (u8, u8) {
     (reg_2, reg_1)
 }
 
-pub fn generate_interrupt(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
+pub fn generate_interrupt(op_code: u8, cpu: &mut Cpu) {
     if cpu.interrupt_enabled {
-        return handle_op_code(op_code, cpu);
-    }
-    else {
-        return Err("Interrupt Disabled");
+        handle_op_code(op_code, cpu);
     }
 }
