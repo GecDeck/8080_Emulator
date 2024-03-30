@@ -38,7 +38,7 @@ fn main() -> Result<(), u8> {
 
     while !raylib_handle.window_should_close() {
         update(&mut raylib_handle, &mut hardware, &mut cpu);
-        render(&mut raylib_handle, &thread, &mut hardware);
+        render(&mut raylib_handle, &thread, &mut hardware, &mut cpu);
     }
 
     Ok(())
@@ -86,17 +86,34 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     }
 }
 
-fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThread, hardware: &mut Hardware) {
+fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThread, hardware: &mut Hardware, cpu: &mut Cpu) {
     // Renders things to the screen based on the state of the machine
 
     let mut draw_handle = raylib_handle.begin_drawing(thread);
 
     draw_handle.clear_background(OFF_COLOUR);
 
-    draw_handle.draw_fps(0, 0);
+    // Debug Rendering
+    draw_handle.draw_fps(0, 400);
     // Input Debug
     let input_1: String = format!("0b{:08b}", hardware.debug_input1());
-    draw_handle.draw_text(&input_1, 0, DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&input_1, 0, 400 + DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
     let input_2: String = format!("0b{:08b}", hardware.debug_input2());
-    draw_handle.draw_text(&input_2, 0, 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&input_2, 0, 400 + 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+
+    // Game Rendering
+    draw_handle.draw_rectangle(0, 0, 224, 256, Color::BLUE);
+
+    // The following code is stolen from github.com/kurtjd/space-invaders-emulator/
+    for i in 0..7168 {
+        let byte = cpu.memory.read_at(0x2400 + i);
+        let y = 256 - (i % 32) * 8;
+        let x = i / 32;
+
+        for k in 0..8 {
+            if byte & (0x01 << k) == (0x01 << k) {
+                draw_handle.draw_pixel(x as i32, y as i32, ON_COLOUR);
+            }
+        }
+    }
 }

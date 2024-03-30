@@ -56,6 +56,10 @@ impl Memory {
         }
     }
 
+    pub fn read_vram(&self) -> Vec<u8> {
+        self.held_memory[0x2400..=0x3fff].to_vec()
+    }
+
     pub fn read_at(&self, addr: u16) -> u8 {
         self.held_memory[addr as usize]
     }
