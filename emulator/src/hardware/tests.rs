@@ -34,9 +34,10 @@ fn test_handle_io() {
 
     assert_eq!(handle_io(0xdb, &mut hardware, 3, 0x00), Some(0xff));
 
-    // SOUND
-    // TODO: write this
-
     // INPUT
+    // TODO: write this
+    // How do I test this well? This is why you write your tests before the code
+
+    // SOUND
     // TODO: write this
 }

@@ -49,7 +49,7 @@ struct Ports {
 impl Ports {
     fn new() -> Self {
         Self {
-            input_1: 0x00,
+            input_1: 0x10,
             input_2: 0x00,
             shift_result: 0x00,
             shift_amount: 0x00,

@@ -25,7 +25,7 @@ fn main() -> Result<(), u8> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        println!("Please provide a file to disassemble");
+        println!("Please provide a rom to emulate");
     }
 
     let file_path: &str = &args[1];
@@ -80,9 +80,9 @@ fn main() -> Result<(), u8> {
 
         // Input Debug
         let input_1: String = format!("0b{:08b}", hardware.debug_input1());
-        draw_handle.draw_text(&input_1, 12, 12, DEBUG_TEXT_SIZE, ON_COLOUR);
+        draw_handle.draw_text(&input_1, 0, 0, DEBUG_TEXT_SIZE, ON_COLOUR);
         let input_2: String = format!("0b{:08b}", hardware.debug_input2());
-        draw_handle.draw_text(&input_2, 12, 32, DEBUG_TEXT_SIZE, ON_COLOUR);
+        draw_handle.draw_text(&input_2, 0, 0+DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
     }
 
     Ok(())

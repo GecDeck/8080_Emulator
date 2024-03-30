@@ -6,4 +6,6 @@
 
 ## TODO
 - Handle Clock Cycles
-- Hardware Emulation
+- Input
+- Rendering
+- Audio
