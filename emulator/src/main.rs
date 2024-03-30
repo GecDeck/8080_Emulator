@@ -7,6 +7,9 @@ use emulator::cpu::Cpu;
 use emulator::hardware;
 use emulator::hardware::Hardware;
 
+const WIDTH: i32 = 1920;
+const HEIGHT: i32 = 1080;
+
 const ON_COLOUR: Color = Color::WHITE;
 const OFF_COLOUR: Color = Color::BLACK;
 
@@ -14,7 +17,7 @@ const DEBUG_TEXT_SIZE: i32 = 20;
 
 fn main() -> Result<(), u8> {
     let (mut raylib_handle, thread) = raylib::init()
-        .size(640, 480)
+        .size(WIDTH, HEIGHT)
         .title("Space Invaders")
         .build();
     raylib_handle.set_target_fps(60);
