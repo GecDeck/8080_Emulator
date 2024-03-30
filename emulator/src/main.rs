@@ -37,58 +37,66 @@ fn main() -> Result<(), u8> {
     // Loads Rom into memory
 
     while !raylib_handle.window_should_close() {
-
-        // UPDATE
-        hardware::input::read_input(&raylib_handle, &mut hardware, hardware::input::InputConfig::default());
-
-        let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
-        cpu.pc.address += 1;
-        // Important to remember pc address is incremented before op code is handled
-        //  when handling operations that read additional bytes, the first byte to be read will be
-        //  at the pc address NOT pc address + 1
-
-        // println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
-
-        let result = match op_code {
-            0xdb | 0xd3 => { // IN & OUT
-                // IO is handled by the hardware module not the cpu
-                // For IN operations handle_io returns the value read from the port
-                let port_byte: u8 = cpu.memory.read_at(cpu.pc.address);
-                match hardware::handle_io(op_code, &mut hardware, port_byte, cpu.a.value) {
-                    Some(value) => cpu.a.value = value,
-                    None => {},
-                }
-                Ok(1)
-                // IN & OUT always read one additional byte
-            },
-            _ => cpu::dispatcher::handle_op_code(op_code, &mut cpu)
-        };
-
-        match result {
-            Err(e) => {
-                println!("0x{:02x} encountered error: {}", op_code, e);
-                panic!();
-            },
-            Ok(additional_bytes) => match additional_bytes {
-                255 => return Ok(()),
-                // Only halt should return 255
-                _ => cpu.pc.address += additional_bytes,
-            },
-        }
-
-        // RENDER
-
-        let mut draw_handle = raylib_handle.begin_drawing(&thread);
-
-        draw_handle.clear_background(OFF_COLOUR);
-
-        draw_handle.draw_fps(0, 0);
-        // Input Debug
-        let input_1: String = format!("0b{:08b}", hardware.debug_input1());
-        draw_handle.draw_text(&input_1, 0, DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
-        let input_2: String = format!("0b{:08b}", hardware.debug_input2());
-        draw_handle.draw_text(&input_2, 0, 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+        update(&mut raylib_handle, &mut hardware, &mut cpu);
+        render(&mut raylib_handle, &thread, &mut hardware);
     }
 
     Ok(())
+}
+
+fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu: &mut Cpu) {
+    // Handles updating the state of the emulator before rendering
+
+    hardware::input::read_input(&raylib_handle, hardware, hardware::input::InputConfig::default());
+    // Reads user input and changes the state of the hardware input ports
+
+    let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
+    cpu.pc.address += 1;
+    // Important to remember pc address is incremented before op code is handled
+    //  when handling operations that read additional bytes, the first byte to be read will be
+    //  at the pc address NOT pc address + 1
+
+    // println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
+
+    let result = match op_code {
+        0xdb | 0xd3 => { // IN & OUT
+            // IO is handled by the hardware module not the cpu
+            // For IN operations handle_io returns the value read from the port
+            let port_byte: u8 = cpu.memory.read_at(cpu.pc.address);
+            match hardware::handle_io(op_code, hardware, port_byte, cpu.a.value) {
+                Some(value) => cpu.a.value = value,
+                None => {},
+            }
+            Ok(1)
+            // IN & OUT always read one additional byte
+        },
+        _ => cpu::dispatcher::handle_op_code(op_code, cpu)
+    };
+
+    match result {
+        Err(e) => {
+            println!("0x{:02x} encountered error: {}", op_code, e);
+            panic!();
+        },
+        Ok(additional_bytes) => match additional_bytes {
+            255 => panic!("HALT"),
+            // Only halt should return 255
+            _ => cpu.pc.address += additional_bytes,
+        },
+    }
+}
+
+fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThread, hardware: &mut Hardware) {
+    // Renders things to the screen based on the state of the machine
+
+    let mut draw_handle = raylib_handle.begin_drawing(thread);
+
+    draw_handle.clear_background(OFF_COLOUR);
+
+    draw_handle.draw_fps(0, 0);
+    // Input Debug
+    let input_1: String = format!("0b{:08b}", hardware.debug_input1());
+    draw_handle.draw_text(&input_1, 0, DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    let input_2: String = format!("0b{:08b}", hardware.debug_input2());
+    draw_handle.draw_text(&input_2, 0, 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
 }

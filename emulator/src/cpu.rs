@@ -1,5 +1,7 @@
 use std::fs;
 
+use self::dispatcher::handle_op_code;
+
 mod tests;
 pub mod dispatcher;
 
@@ -537,4 +539,13 @@ fn split_register_pair(reg_pair: u16) -> (u8, u8) {
 
 fn swap_registers(reg_1: u8, reg_2: u8) -> (u8, u8) {
     (reg_2, reg_1)
+}
+
+pub fn generate_interrupt(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
+    if cpu.interrupt_enabled {
+        return handle_op_code(op_code, cpu);
+    }
+    else {
+        return Err("Interrupt Disabled");
+    }
 }
