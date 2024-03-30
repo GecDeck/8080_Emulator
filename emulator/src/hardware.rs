@@ -32,16 +32,11 @@ struct Ports {
     //      5: P2 Left
     //      6: P2 Right
     //      7: Coin info toggle (0: On, 1: Off)
-    shift_result: u8,
     shift_amount: u8,
     // Offset from the left that will be read when reading shift_result
     // First 3 bits are the offset
     // Offset of 2 will start reading from the 3rd bit
     sound_1: u8,
-    shift_data: u8,
-    // Data to write to shift register
-    //  Every write adds this byte to the high byte of the shift register
-    //  And moves the previous high byte to the low byte
     sound_2: u8,
     watchdog: u8,
     // When text is written to the screen this is the ascii value of each letter written
@@ -51,10 +46,8 @@ impl Ports {
         Self {
             input_1: 0x10,
             input_2: 0x00,
-            shift_result: 0x00,
             shift_amount: 0x00,
             sound_1: 0x00,
-            shift_data: 0x00,
             sound_2: 0x00,
             watchdog: 0x00,
         }

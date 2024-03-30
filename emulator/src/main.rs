@@ -17,6 +17,7 @@ fn main() -> Result<(), u8> {
         .size(640, 480)
         .title("Space Invaders")
         .build();
+    raylib_handle.set_target_fps(60);
 
     let mut cpu: Cpu = Cpu::init();
     let mut hardware: Hardware = Hardware::init();
@@ -78,11 +79,12 @@ fn main() -> Result<(), u8> {
 
         draw_handle.clear_background(OFF_COLOUR);
 
+        draw_handle.draw_fps(0, 0);
         // Input Debug
         let input_1: String = format!("0b{:08b}", hardware.debug_input1());
-        draw_handle.draw_text(&input_1, 0, 0, DEBUG_TEXT_SIZE, ON_COLOUR);
+        draw_handle.draw_text(&input_1, 0, DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
         let input_2: String = format!("0b{:08b}", hardware.debug_input2());
-        draw_handle.draw_text(&input_2, 0, 0+DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+        draw_handle.draw_text(&input_2, 0, 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
     }
 
     Ok(())
