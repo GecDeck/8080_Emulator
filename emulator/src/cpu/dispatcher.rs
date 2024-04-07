@@ -41,7 +41,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             return Ok(2);
         },
         0x12 => cpu.memory.write_at(pair_registers(cpu.d.value, cpu.e.value), cpu.a.value),
-        0x13 => (cpu.d.value, cpu.e.value) = inx( pair_registers(cpu.d.value, cpu.c.value) ),
+        0x13 => (cpu.d.value, cpu.e.value) = inx( pair_registers(cpu.d.value, cpu.e.value) ),
         0x14 => cpu.d.value = inr(cpu.d.value, &mut cpu.flags),
         0x15 => cpu.d.value = dcr(cpu.d.value, &mut cpu.flags),
         0x16 => { // MVI D
@@ -55,7 +55,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             pair_registers(cpu.d.value, cpu.e.value),
             &mut cpu.flags
             ),
-        0x1a => cpu.a.value = cpu.memory.read_at(pair_registers(cpu.b.value, cpu.c.value)),
+        0x1a => cpu.a.value = cpu.memory.read_at(pair_registers(cpu.d.value, cpu.e.value)),
         0x1b => (cpu.d.value, cpu.e.value) = dcx( pair_registers(cpu.d.value, cpu.e.value) ),
         0x1c => cpu.e.value = inr(cpu.e.value, &mut cpu.flags),
         0x1d => cpu.e.value = dcr(cpu.e.value, &mut cpu.flags),

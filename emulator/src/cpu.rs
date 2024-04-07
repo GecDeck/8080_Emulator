@@ -217,6 +217,9 @@ impl Cpu {
     pub fn debug_program_counter(&self) -> u16 {
         self.pc.address
     }
+    pub fn debug_b(&self) -> u8 {
+        self.b.value
+    }
 }
 
 // OPERATIONS
