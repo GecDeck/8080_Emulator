@@ -362,6 +362,7 @@ fn call(
     // Pushes the return address to the stack then conditionally returns the address to jump to
     // The return address is the address of the next instruction
 
+    println!("call 0x{:02x} 0x{:02x}", address_bytes.1, address_bytes.0);
     let jmp_address: Option<u16> = jmp(address_bytes, condition);
 
     match jmp_address {
@@ -387,6 +388,7 @@ fn ret(condition: Option<bool>, stack_pointer: &mut AddressPointer, memory: &mut
         let return_adress_bytes: (u8, u8) = pop(stack_pointer, memory);
         // if the address 0xc3d4 was pushed this should return (0xd4, 0xc3)
         let return_adress: u16 = pair_registers(return_adress_bytes.1, return_adress_bytes.0);
+        println!("ret 0x{:04x}", return_adress);
 
         return Some(return_adress);
     }

@@ -34,9 +34,11 @@ fn main() -> Result<(), u8> {
     }
 
     // TODO: fix bug
-    // Something is happening to the stack thats causing a ret to go to the wrong location
     //  0x14cc: 0xc5 puts 6f02 or sometime 6e02 on the stack because it pushes BC
-    //  A RET gets called to 6f02 or sometimes 6e02 by 0x0380: 0xc9
+    //  Something is happening to the stack thats causing a ret to go to the wrong location
+    //  0x03be: 0xcd makes a call to 0x1a06
+    //  0x1a10: 0xc9 rets to 0x03c1
+    //  A RET gets called to 6f02 or sometimes 6e02 shortly after
     //  Then starts counting up pc only being stopped by screen interrupts
     //  hits DAA which shouldn't be used so some misalignment happened somewhere
     //      This is likely a side effect of the weird ret to a large number
@@ -50,7 +52,7 @@ fn main() -> Result<(), u8> {
     cpu.memory.load_rom(&rom, 0);
     // Loads Rom into memory
 
-    for i in 0x14cc..0x14cf {
+    for i in 0x03be..0x03c1 {
         println!("0x{:04x}: 0x{:02x}", i, cpu.memory.read_at(i));
     }
 
@@ -93,7 +95,8 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     //  when handling operations that read additional bytes, the first byte to be read will be
     //  at the pc address NOT pc address + 1
 
-    // println!("0x{:04x}: 0x{:02x}", op_code_location, op_code);
+    println!("0x{:04x}: 0x{:02x}", op_code_location, op_code);
+    if op_code_location > 0x6000 { panic!("pc above 6000") }
 
     let cycles: u8 = cpu::dispatcher::CLOCK_CYCLES[op_code as usize];
 
