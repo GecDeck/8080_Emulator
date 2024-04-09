@@ -33,6 +33,15 @@ fn main() -> Result<(), u8> {
         println!("Please provide a rom to emulate");
     }
 
+    // TODO: fix bug
+    // Something is happening to the stack thats causing a ret to go to the wrong location
+    //  0x14cc: 0xc5 puts 6f02 or sometime 6e02 on the stack because it pushes BC
+    //  A RET gets called to 6f02 or sometimes 6e02 by 0x0380: 0xc9
+    //  Then starts counting up pc only being stopped by screen interrupts
+    //  hits DAA which shouldn't be used so some misalignment happened somewhere
+    //      This is likely a side effect of the weird ret to a large number
+    //  Crashes when it tries to increment pc after hitting 0xffff
+
     let file_path: &str = &args[1];
     let rom: Vec<u8> = match fs::read(file_path) {
         Ok(result) => result,
@@ -40,6 +49,10 @@ fn main() -> Result<(), u8> {
     };
     cpu.memory.load_rom(&rom, 0);
     // Loads Rom into memory
+
+    for i in 0x14cc..0x14cf {
+        println!("0x{:04x}: 0x{:02x}", i, cpu.memory.read_at(i));
+    }
 
     while !raylib_handle.window_should_close() {
         // Locked to 60 frames per second
@@ -80,6 +93,8 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     //  when handling operations that read additional bytes, the first byte to be read will be
     //  at the pc address NOT pc address + 1
 
+    // println!("0x{:04x}: 0x{:02x}", op_code_location, op_code);
+
     let cycles: u8 = cpu::dispatcher::CLOCK_CYCLES[op_code as usize];
 
     let result = match op_code {
@@ -100,7 +115,7 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     match result {
         Err(e) => {
             println!("0x{:04x}: 0x{:02x} encountered error: {}", op_code_location, op_code, e);
-            panic!();
+            // panic!();
         },
         Ok(additional_bytes) => match additional_bytes {
             255 => panic!("HALT"),
