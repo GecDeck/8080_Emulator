@@ -51,14 +51,28 @@ fn main() -> Result<(), u8> {
         //  0xc2: JNZ adr (if NZ PC = adr)
         // TODO: Need to find the other rendering loops
         //  after B hits 0 it moves onto another loop of some sort
-        update(&mut raylib_handle, &mut hardware, &mut cpu);
+        let mut total_cycles: u64 = 0;
+        let cycle_max: u64 = 33_000;
+
+        while total_cycles < cycle_max / 2 {
+            total_cycles += update(&mut raylib_handle, &mut hardware, &mut cpu);
+        }
+        cpu::generate_interrupt(0xcf, &mut cpu);
+        // Call mid screen interrupt
+
+        while total_cycles < cycle_max {
+            total_cycles += update(&mut raylib_handle, &mut hardware, &mut cpu);
+        }
+        cpu::generate_interrupt(0xd7, &mut cpu);
+        // Call full screen interrupt
+
         render(&mut raylib_handle, &thread, &hardware, &cpu);
     }
 
     Ok(())
 }
 
-fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu: &mut Cpu) {
+fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu: &mut Cpu) -> u64 {
     // Handles updating the state of the emulator before rendering
 
     hardware::input::read_input(&raylib_handle, hardware, hardware::input::InputConfig::default());
@@ -69,6 +83,8 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     // Important to remember pc address is incremented before op code is handled
     //  when handling operations that read additional bytes, the first byte to be read will be
     //  at the pc address NOT pc address + 1
+
+    let cycles: u8 = cpu::dispatcher::CLOCK_CYCLES[op_code as usize];
 
     let result = match op_code {
         0xdb | 0xd3 => { // IN & OUT
@@ -96,6 +112,8 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
             _ => cpu.pc.address += additional_bytes,
         },
     }
+
+    cycles as u64
 }
 
 fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThread, hardware: &Hardware, cpu: &Cpu) {
