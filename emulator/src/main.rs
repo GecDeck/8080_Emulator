@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 
 use std::env;
+use std::fs;
 
 use emulator::cpu;
 use emulator::cpu::Cpu;
@@ -33,17 +34,23 @@ fn main() -> Result<(), u8> {
     }
 
     let file_path: &str = &args[1];
-    cpu.memory.load_rom(file_path);
+    let rom: Vec<u8> = match fs::read(file_path) {
+        Ok(result) => result,
+        Err(e) => panic!("{}", e),
+    };
+    cpu.memory.load_rom(&rom, 0);
     // Loads Rom into memory
 
     while !raylib_handle.window_should_close() {
-        // Render Loop @ 0x1a32:
+        // Loading Render Loop @ 0x1a32:
         //  0x1a: LDAX D (A = (DE))
         //  0x77: MOV M, A ((HL) = A)
         //  0x23: INX H (HL + 1)
         //  0x13: INX D (DE + 1)
         //  0x05: DCR B (B - 1)
         //  0xc2: JNZ adr (if NZ PC = adr)
+        // TODO: Need to find the other rendering loops
+        //  after B hits 0 it moves onto another loop of some sort
         update(&mut raylib_handle, &mut hardware, &mut cpu);
         render(&mut raylib_handle, &thread, &hardware, &cpu);
     }
@@ -62,8 +69,6 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     // Important to remember pc address is incremented before op code is handled
     //  when handling operations that read additional bytes, the first byte to be read will be
     //  at the pc address NOT pc address + 1
-
-    // println!("{:04x}    0x{:02x}    0x{:02x}    0x{:02x}", cpu.pc.address - 1, op_code, cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
 
     let result = match op_code {
         0xdb | 0xd3 => { // IN & OUT
@@ -130,7 +135,7 @@ fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThrea
 
             for b in 0..8 {
                 let x: i32 = ix as i32;
-                let y: i32 = 256 - (iy as i32 + b);
+                let y: i32 = 256 - ((iy * 8) as i32 + b);
 
                 if byte & 1 == 1 {
                     draw_handle.draw_pixel(x + game_x_offset, y + game_y_offset, ON_COLOUR);

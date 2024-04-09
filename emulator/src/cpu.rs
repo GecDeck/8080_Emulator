@@ -1,5 +1,3 @@
-use std::fs;
-
 use self::dispatcher::handle_op_code;
 
 mod tests;
@@ -68,18 +66,14 @@ impl Memory {
         self.held_memory[addr as usize] = byte;
     }
 
-    pub fn load_rom(&mut self, file_path: &str) {
+    pub fn load_rom(&mut self, rom: &[u8], offset: u16) {
         // Loads a rom into memory
-        let rom: Vec<u8> = match fs::read(file_path) {
-            Ok(result) => result,
-            Err(e) => panic!("{}", e),
-        };
 
         for (address, byte) in rom.iter().enumerate() {
             assert!(address < 0x2000);
             // Rom should fit in the space of memory reserved for roms
 
-            self.write_at(address as u16, *byte);
+            self.write_at(address as u16 + offset, *byte);
         }
     }
 }
