@@ -454,14 +454,19 @@ fn or(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
 }
 
 fn cmp(reg_1: u8, reg_2: u8, flags: &mut Flags) {
-    // Ge ts the difference of two registers, and sets flags based on the result
+    // Gets the difference of two registers, and sets flags based on the result
     //  The result is discarded
 
-    match reg_1 as i16 - reg_2 as i16 {
+    let result: i16 = reg_1 as i16 - reg_2 as i16;
+
+    *flags = set_flags_from_operation(result, *flags);
+
+    match result {
         i16::MIN..=-1 => flags.set_flag(Flag::CY),
         0 => flags.set_flag(Flag::Z),
         1..=i16::MAX => flags.clear_flag(Flag::CY),
     }
+    // Carry works differently here so it will be calculated after
 }
 
 fn rotate_right(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {

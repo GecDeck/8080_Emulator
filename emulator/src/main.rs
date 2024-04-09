@@ -42,31 +42,26 @@ fn main() -> Result<(), u8> {
     // Loads Rom into memory
 
     while !raylib_handle.window_should_close() {
-        // Loading Render Loop @ 0x1a32:
-        //  0x1a: LDAX D (A = (DE))
-        //  0x77: MOV M, A ((HL) = A)
-        //  0x23: INX H (HL + 1)
-        //  0x13: INX D (DE + 1)
-        //  0x05: DCR B (B - 1)
-        //  0xc2: JNZ adr (if NZ PC = adr)
-        // TODO: Need to find the other rendering loops
-        //  after B hits 0 it moves onto another loop of some sort
-        let mut total_cycles: u64 = 0;
+        // Locked to 60 frames per second
+        // Interrupts twice per frame; Once in the middle, and once at the end
+        // There are a total of 33 000 cycles in every half frame
+        let mut frame_cycles: u64 = 0;
         let cycle_max: u64 = 33_000;
 
-        while total_cycles < cycle_max / 2 {
-            total_cycles += update(&mut raylib_handle, &mut hardware, &mut cpu);
+        while frame_cycles < cycle_max / 2 {
+            frame_cycles += update(&mut raylib_handle, &mut hardware, &mut cpu);
         }
         cpu::generate_interrupt(0xcf, &mut cpu);
         // Call mid screen interrupt
 
-        while total_cycles < cycle_max {
-            total_cycles += update(&mut raylib_handle, &mut hardware, &mut cpu);
+        while frame_cycles < cycle_max {
+            frame_cycles += update(&mut raylib_handle, &mut hardware, &mut cpu);
         }
         cpu::generate_interrupt(0xd7, &mut cpu);
         // Call full screen interrupt
 
         render(&mut raylib_handle, &thread, &hardware, &cpu);
+        // Render frame
     }
 
     Ok(())
@@ -79,6 +74,7 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     // Reads user input and changes the state of the hardware input ports
 
     let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
+    let op_code_location: u16 = cpu.pc.address;
     cpu.pc.address += 1;
     // Important to remember pc address is incremented before op code is handled
     //  when handling operations that read additional bytes, the first byte to be read will be
@@ -103,7 +99,7 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
 
     match result {
         Err(e) => {
-            println!("0x{:02x} encountered error: {}", op_code, e);
+            println!("0x{:04x}: 0x{:02x} encountered error: {}", op_code_location, op_code, e);
             panic!();
         },
         Ok(additional_bytes) => match additional_bytes {
