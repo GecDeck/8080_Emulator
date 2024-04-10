@@ -603,12 +603,18 @@ fn test_operation_handling() {
     cpu.h.value = 0xee;
     cpu.l.value = 0x33;
     push((0xff, 0x22), &mut cpu.sp, &mut cpu.memory);
+    // stack looks like:
+    //  0xff
+    //  0x22
 
     let _ = handle_op_code(0xe3, &mut cpu);
+    // stack looks like:
+    //  0x33
+    //  0xee
     assert_eq!(cpu.h.value, 0xff);
     assert_eq!(cpu.l.value, 0x22);
-    assert_eq!(cpu.memory.read_at(cpu.sp.address), 0x33);
-    assert_eq!(cpu.memory.read_at(cpu.sp.address + 1), 0xee);
+    assert_eq!(cpu.memory.read_at(cpu.sp.address), 0xee);
+    assert_eq!(cpu.memory.read_at(cpu.sp.address + 1), 0x33);
 
     // XCHG
     cpu.reset();

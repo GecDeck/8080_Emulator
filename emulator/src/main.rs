@@ -10,8 +10,11 @@ use emulator::hardware::Hardware;
 
 const WIDTH: i32 = 1920;
 const HEIGHT: i32 = 1080;
+const SCALE: i32 = 2;
 
-const ON_COLOUR: Color = Color::WHITE;
+const TOP_COLOUR: Color = Color::RED;
+const MID_COLOUR: Color = Color::WHITE;
+const BOTTOM_COLOUR: Color = Color::GREEN;
 const OFF_COLOUR: Color = Color::BLACK;
 
 const DEBUG_TEXT_SIZE: i32 = 20;
@@ -129,21 +132,21 @@ fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThrea
     draw_handle.draw_fps(0, 400);
     // Input Debug
     let input_1: String = format!("INPUT_1: 0b{:08b}", hardware.debug_input1());
-    draw_handle.draw_text(&input_1, 0, 400 + DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&input_1, 0, 400 + DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
     let input_2: String = format!("INPUT_2: 0b{:08b}", hardware.debug_input2());
-    draw_handle.draw_text(&input_2, 0, 400 + 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&input_2, 0, 400 + 2*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
     // CPU Debug
     let stack_pointer: String = format!("SP:    0x{:04x}", cpu.debug_stack_pointer());
-    draw_handle.draw_text(&stack_pointer, 0, 400 + 3*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&stack_pointer, 0, 400 + 3*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
     let program_counter: String = format!("PC:  0x{:04x}", cpu.debug_program_counter());
-    draw_handle.draw_text(&program_counter, 0, 400 + 4*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&program_counter, 0, 400 + 4*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
     let b_reg: String = format!("B_REGISTER:    0x{:02x}", cpu.debug_b());
-    draw_handle.draw_text(&b_reg, 0, 400 + 5*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, ON_COLOUR);
+    draw_handle.draw_text(&b_reg, 0, 400 + 5*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
 
     // Game Rendering
     let game_x_offset: i32 = 848;
     let game_y_offset: i32 = 412;
-    draw_handle.draw_rectangle(game_x_offset as i32, game_y_offset as i32, 224, 256, Color::BLUE);
+    draw_handle.draw_rectangle(game_x_offset as i32, game_y_offset as i32, 224, 256, OFF_COLOUR);
 
     let vram: &[u8] = cpu.memory.read_vram();
 
@@ -154,11 +157,16 @@ fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibThrea
             i += 1;
 
             for b in 0..8 {
-                let x: i32 = ix as i32;
-                let y: i32 = 256 - ((iy * 8) as i32 + b);
+                let x: i32 = (ix as i32) * SCALE;
+                let y: i32 = (256 - ((iy * 8) as i32 + b)) * SCALE;
 
                 if byte & 1 == 1 {
-                    draw_handle.draw_pixel(x + game_x_offset, y + game_y_offset, ON_COLOUR);
+                    let colour: Color = match iy * 8 {
+                        201..=219 => TOP_COLOUR,
+                        0..=79 => BOTTOM_COLOUR,
+                        _ => MID_COLOUR,
+                    };
+                    draw_handle.draw_rectangle(x + game_x_offset, y + game_y_offset, SCALE, SCALE, colour);
                 }
 
                 byte >>= 1;
