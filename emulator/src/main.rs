@@ -38,7 +38,11 @@ fn main() -> Result<(), u8> {
     //  Something is happening to the stack thats causing a ret to go to the wrong location
     //  0x03be: 0xcd makes a call to 0x1a06
     //  0x1a10: 0xc9 rets to 0x03c1
+    //  0x03c1: 0xe1 pops from the stack
     //  A RET gets called to 6f02 or sometimes 6e02 shortly after
+    //      It should be returning to after the last unreturned call at 0x00b0
+    //      This is because half of the return address was popped off
+    //      Which means either the instructions are misaligned or something else happened
     //  Then starts counting up pc only being stopped by screen interrupts
     //  hits DAA which shouldn't be used so some misalignment happened somewhere
     //      This is likely a side effect of the weird ret to a large number
