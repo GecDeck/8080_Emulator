@@ -475,11 +475,7 @@ fn rotate_right(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {
 
     let mut result: u8 = reg >> 1;
     if !through_carry { result = result | (reg << 7) }
-    else { match flags.check_flag(Flag::CY) {
-        1 => result = result | 0b10000000,
-        0 => result = result & 0b11111110,
-        _ => panic!("Check flag can only return 1 or 0"),
-    }}
+    else { result = result | flags.check_flag(Flag::CY) << 7 }
 
     match reg & 0b00000001 {
         0b00000001 => flags.set_flag(Flag::CY),
@@ -497,11 +493,7 @@ fn rotate_left(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {
 
     let mut result: u8 = reg << 1;
     if !through_carry { result = result | (reg >> 7) }
-    else { match flags.check_flag(Flag::CY) {
-        1 => result = result | 0b00000001,
-        0 => result = result & 0b01111111,
-        _ => panic!("Check flag can only return 1 or 0"),
-    }}
+    else { result = result | flags.check_flag(Flag::CY) }
 
     match reg & 0b10000000 {
         0b10000000 => flags.set_flag(Flag::CY),
