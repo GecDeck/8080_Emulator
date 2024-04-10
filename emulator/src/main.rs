@@ -33,21 +33,6 @@ fn main() -> Result<(), u8> {
         println!("Please provide a rom to emulate");
     }
 
-    // TODO: fix bug
-    //  0x14cc: 0xc5 puts 6f02 or sometime 6e02 on the stack because it pushes BC
-    //  Something is happening to the stack thats causing a ret to go to the wrong location
-    //  0x03be: 0xcd makes a call to 0x1a06
-    //  0x1a10: 0xc9 rets to 0x03c1
-    //  0x03c1: 0xe1 pops from the stack
-    //  A RET gets called to 6f02 or sometimes 6e02 shortly after
-    //      It should be returning to after the last unreturned call at 0x00b0
-    //      This is because half of the return address was popped off
-    //      Which means either the instructions are misaligned or something else happened
-    //  Then starts counting up pc only being stopped by screen interrupts
-    //  hits DAA which shouldn't be used so some misalignment happened somewhere
-    //      This is likely a side effect of the weird ret to a large number
-    //  Crashes when it tries to increment pc after hitting 0xffff
-
     let file_path: &str = &args[1];
     let rom: Vec<u8> = match fs::read(file_path) {
         Ok(result) => result,
@@ -56,9 +41,9 @@ fn main() -> Result<(), u8> {
     cpu.memory.load_rom(&rom, 0);
     // Loads Rom into memory
 
-    for i in 0x03be..0x03c1 {
-        println!("0x{:04x}: 0x{:02x}", i, cpu.memory.read_at(i));
-    }
+    // for i in 0x03be..0x03c1 {
+    //     println!("0x{:04x}: 0x{:02x}", i, cpu.memory.read_at(i));
+    // }
 
     while !raylib_handle.window_should_close() {
         // Locked to 60 frames per second
@@ -95,12 +80,10 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
     let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
     let op_code_location: u16 = cpu.pc.address;
     cpu.pc.address += 1;
+    let additional_bytes: (u8, u8) = (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
     // Important to remember pc address is incremented before op code is handled
     //  when handling operations that read additional bytes, the first byte to be read will be
     //  at the pc address NOT pc address + 1
-
-    println!("0x{:04x}: 0x{:02x}", op_code_location, op_code);
-    if op_code_location > 0x6000 { panic!("pc above 6000") }
 
     let cycles: u8 = cpu::dispatcher::CLOCK_CYCLES[op_code as usize];
 
@@ -131,6 +114,7 @@ fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware, cpu
         },
     }
 
+    // println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
     cycles as u64
 }
 

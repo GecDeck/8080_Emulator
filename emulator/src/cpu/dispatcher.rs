@@ -575,7 +575,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
         },
         0xe3 => { //XTHL
             let (h, l): (u8, u8) = pop(&mut cpu.sp, &mut cpu.memory);
-            push((cpu.h.value, cpu.l.value), &mut cpu.sp, &mut cpu.memory);
+            push((cpu.l.value, cpu.h.value), &mut cpu.sp, &mut cpu.memory);
             (cpu.h.value, cpu.l.value) = (h, l);
         },
         0xe4 => { // CPO
