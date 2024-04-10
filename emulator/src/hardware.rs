@@ -136,7 +136,7 @@ fn read_port(port: Port, hardware: &mut Hardware) -> u8 {
         Port::INP1 => return hardware.ports.input_1,
         Port::INP2 => return hardware.ports.input_2,
         Port::SHFTIN => {
-            let left_offset = hardware.ports.shift_amount >> 5;
+            let left_offset = hardware.ports.shift_amount & 0b0000_0111;
             // Only get bits 0-2 for offset
             let right_offset = 8 - left_offset;
             // we read 8 bit which leaves over right_offset of bits not read

@@ -12,7 +12,8 @@
 - Upside down Y in attract doesn't get flipped or even have an alien appear
 - Collision works but doesn't seem to destroy aliens
 - Coin input doesn't seem to be working
-- Centering of game window
 - Audio
-- Clean up main
+- Clean up main and lib
 - Proper Config
+    - Input config
+    - Window size

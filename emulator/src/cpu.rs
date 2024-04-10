@@ -211,9 +211,6 @@ impl Cpu {
     pub fn debug_program_counter(&self) -> u16 {
         self.pc.address
     }
-    pub fn debug_b(&self) -> u8 {
-        self.b.value
-    }
 }
 
 // OPERATIONS
@@ -474,8 +471,8 @@ fn rotate_right(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {
     //  returns result
 
     let mut result: u8 = reg >> 1;
-    if !through_carry { result = result | (reg << 7) }
-    else { result = result | flags.check_flag(Flag::CY) << 7 }
+    if !through_carry { result |= reg << 7 }
+    else { result |= flags.check_flag(Flag::CY) << 7 }
 
     match reg & 0b00000001 {
         0b00000001 => flags.set_flag(Flag::CY),
@@ -492,8 +489,8 @@ fn rotate_left(reg: u8, through_carry: bool, flags: &mut Flags) -> u8 {
     //  returns result
 
     let mut result: u8 = reg << 1;
-    if !through_carry { result = result | (reg >> 7) }
-    else { result = result | flags.check_flag(Flag::CY) }
+    if !through_carry { result |= reg >> 7 }
+    else { result |= flags.check_flag(Flag::CY) }
 
     match reg & 0b10000000 {
         0b10000000 => flags.set_flag(Flag::CY),
@@ -548,6 +545,6 @@ fn swap_registers(reg_1: u8, reg_2: u8) -> (u8, u8) {
 
 pub fn generate_interrupt(op_code: u8, cpu: &mut Cpu) {
     if cpu.interrupt_enabled {
-        handle_op_code(op_code, cpu);
+        let _ = handle_op_code(op_code, cpu);
     }
 }

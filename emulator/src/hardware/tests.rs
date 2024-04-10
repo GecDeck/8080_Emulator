@@ -13,7 +13,7 @@ fn test_shift() {
     assert_eq!(hardware.shift_register, 0xaaee);
 
     hardware.shift_register = 0b0001111111100000;
-    hardware.ports.shift_amount = 0b01100000;
+    hardware.ports.shift_amount = 0b0000_0011;
     // Offset 3
     assert_eq!(read_port(Port::SHFTIN, &mut hardware), 0b11111111);
 }
@@ -30,7 +30,7 @@ fn test_handle_io() {
     // SHFTIN
     hardware.reset();
     hardware.shift_register = 0b0001111111100000;
-    hardware.ports.shift_amount = 0b01100000;
+    hardware.ports.shift_amount = 0b0000_0011;
 
     assert_eq!(handle_io(0xdb, &mut hardware, 3, 0x00), Some(0xff));
 
