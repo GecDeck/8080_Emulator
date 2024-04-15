@@ -205,11 +205,23 @@ impl Cpu {
         false
     }
 
+    // Being used for debug info
     pub fn debug_stack_pointer(&self) -> u16 {
         self.sp.address
     }
     pub fn debug_program_counter(&self) -> u16 {
         self.pc.address
+    }
+
+    // Being used for CPU DIAG tests
+    pub fn debug_c(&self) -> u8 {
+        self.c.value
+    }
+    pub fn debug_d(&self) -> u8 {
+        self.d.value
+    }
+    pub fn debug_e(&self) -> u8 {
+        self.e.value
     }
 }
 

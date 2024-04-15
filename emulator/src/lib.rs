@@ -124,3 +124,86 @@ pub fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibT
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cpu_diag() {
+        // Load cpudiag
+        // When an out instruction is called
+        //  if port 0: Test is finished
+        //  if port 1: Look at content of C register
+        //      if c is 2: Print the content of the E register
+        //      if c is 9: Print (DE)..(DE+1).. until (DE) == $
+
+        let mut cpu: Cpu = Cpu::init();
+        let cpu_diag: &[u8] = include_bytes!("../cpudiag");
+
+        cpu.memory.load_rom(cpu_diag, 0x100);
+        cpu.pc.address = 0x100;
+
+        let start = std::time::Instant::now();
+        loop {
+            test_update(&mut cpu);
+
+            let now = std::time::Instant::now();
+            if now - start > std::time::Duration::from_secs(120) {
+                panic!("CPU DIAG took over 2 minutes");
+            }
+        }
+    }
+
+    fn test_update(cpu: &mut Cpu) {
+
+        let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
+        let op_code_location: u16 = cpu.pc.address;
+        cpu.pc.address += 1;
+
+        let result = match op_code {
+            0xdb | 0xd3 => { // IN & OUT
+                let port_byte: u8 = cpu.memory.read_at(cpu.pc.address);
+                handle_out(&cpu, port_byte);
+
+                Ok(1)
+                // IN & OUT always read one additional byte
+            },
+            _ => cpu::dispatcher::handle_op_code(op_code, cpu)
+        };
+
+        match result {
+            Err(e) => {
+                println!("0x{:04x}: 0x{:02x} encountered error: {}", op_code_location, op_code, e);
+            },
+            Ok(additional_bytes) => match additional_bytes {
+                255 => panic!("HALT"),
+                _ => cpu.pc.address += additional_bytes,
+            },
+        }
+
+    }
+
+    fn handle_out(cpu: &Cpu, port_byte: u8) {
+        match port_byte {
+            0 => println!("Test Complete"),
+            1 => os_syscall(cpu),
+            _ => panic!("No other ports"),
+        }
+    }
+
+    fn os_syscall(cpu: &Cpu) {
+        match cpu.debug_c() {
+            2 => println!("{}", cpu.debug_e()),
+            9 => {
+                let mut memory_address: u16 = (cpu.debug_d() as u16) << 8 | cpu.debug_e() as u16;
+                let mut string_to_print: String = String::new();
+                while cpu.memory.read_at(memory_address) != '$' as u8 {
+                    string_to_print.push(cpu.memory.read_at(memory_address) as char);
+                    memory_address += 1;
+                }
+            },
+            _ => panic!("No syscalls other than 9 and 2"),
+        }
+    }
+}
