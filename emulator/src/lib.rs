@@ -137,6 +137,7 @@ mod tests {
         //  if port 1: Look at content of C register
         //      if c is 2: Print the content of the E register
         //      if c is 9: Print (DE)..(DE+1).. until (DE) == $
+        // If the program jumps to 0x0005 execute os_syscall directly
 
         let mut cpu: Cpu = Cpu::init();
         let cpu_diag: &[u8] = include_bytes!("../cpudiag");
@@ -157,9 +158,14 @@ mod tests {
 
     fn test_update(cpu: &mut Cpu) {
 
+        if cpu.pc.address == 0x0005 {
+            os_syscall(&cpu);
+        }
+
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
         let op_code_location: u16 = cpu.pc.address;
         cpu.pc.address += 1;
+        let additional_bytes: (u8, u8) = (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
 
         let result = match op_code {
             0xdb | 0xd3 => { // IN & OUT
@@ -182,9 +188,11 @@ mod tests {
             },
         }
 
+        // println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
     }
 
     fn handle_out(cpu: &Cpu, port_byte: u8) {
+        println!("handling out");
         match port_byte {
             0 => println!("Test Complete"),
             1 => os_syscall(cpu),
@@ -202,6 +210,8 @@ mod tests {
                     string_to_print.push(cpu.memory.read_at(memory_address) as char);
                     memory_address += 1;
                 }
+
+                println!("{}", string_to_print);
             },
             _ => panic!("No syscalls other than 9 and 2"),
         }
