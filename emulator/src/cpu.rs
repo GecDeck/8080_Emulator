@@ -523,7 +523,7 @@ fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     if result == 0 { return_flags.set_flag(Flag::Z) }
 
     // Negative Check
-    if result < 0 { return_flags.set_flag(Flag::S) }
+    if result & 0x80 == 0x80 { return_flags.set_flag(Flag::S) }
 
     // Parity Check
     if ((result & 0xff) as u8).count_ones() % 2 == 0 { return_flags.set_flag(Flag::P) }
