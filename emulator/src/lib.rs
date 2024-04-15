@@ -172,6 +172,10 @@ mod tests {
         }
 
         else {
+            if op_code == 0xcd && additional_bytes == (0x89, 0x06) {
+                println!("Setting up SYSCALL");
+            }
+
             let result = match op_code {
                 0xdb | 0xd3 => { // IN & OUT
                     let port_byte: u8 = cpu.memory.read_at(cpu.pc.address);
