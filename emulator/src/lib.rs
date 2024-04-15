@@ -197,6 +197,7 @@ mod tests {
                 },
             }
 
+            println!("0x{:02x}", cpu.a.value);
             println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
         }
     }

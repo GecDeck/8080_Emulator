@@ -339,7 +339,8 @@ fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     // SUB but also removes the value of the carry flag
 
     let carry: u8 = flags.check_flag(Flag::CY);
-    let result: i16 = sub(reg_1, reg_2, flags) as i16 - carry as i16;
+    let result: i16 = reg_1 as i16 - reg_2 as i16 - carry as i16;
+    *flags = set_flags_from_operation(result as i16, *flags);
 
     (result & 0xff) as u8
 }
@@ -530,7 +531,7 @@ fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     if ((result & 0xff) as u8).count_ones() % 2 == 0 { return_flags.set_flag(Flag::P) }
 
     // Carry Check
-    if result > 0xff { return_flags.set_flag(Flag::CY) }
+    if result > 0xff || result < 0x00 { return_flags.set_flag(Flag::CY) }
 
     return_flags
 }

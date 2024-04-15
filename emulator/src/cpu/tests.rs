@@ -83,7 +83,8 @@ fn test_operation_flag_setting() {
 
     // S flag setting
     flags = set_flags_from_operation(-2, flags);
-    assert_eq!(flags.flags, 0b10000000);
+    assert_eq!(flags.flags, 0b10000001);
+    // Negatives also set carry flag for negative carry
 
     // Parity flag setting
     flags = set_flags_from_operation(3, flags);
