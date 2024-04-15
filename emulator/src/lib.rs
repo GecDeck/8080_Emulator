@@ -153,12 +153,14 @@ mod tests {
         cpu.memory.write_at(0x59d, 0xc2);
         cpu.memory.write_at(0x59e, 0x05);
 
+        let mut old_a: u8 = cpu.a.value;
         loop {
-            test_update(&mut cpu);
+            test_update(&mut cpu, old_a);
+            old_a = cpu.a.value;
         }
     }
 
-    fn test_update(cpu: &mut Cpu) {
+    fn test_update(cpu: &mut Cpu, old_a: u8) {
 
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
         let op_code_location: u16 = cpu.pc.address;
@@ -197,7 +199,14 @@ mod tests {
                 },
             }
 
-            println!("0x{:02x}", cpu.a.value);
+            // TODO: fix some bug
+            //  0x02b5 seems like a test completion
+            //      therefore bug must happen after 0x02c0
+            //  0x02ba is a success if A - 0xd9 sets the Z flag
+            //  Lots of rets checking lots of flags probably some problem there
+            if cpu.a.value != old_a {
+                println!("0x{:02x} -> 0x{:02x}", old_a, cpu.a.value);
+            }
             println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
         }
     }
