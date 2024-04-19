@@ -130,7 +130,7 @@ impl Flags {
         assert_ne!(self.flags << 5, 0b11100000);
     }
 
-    pub fn check_flag(&mut self, flag: Flag) -> u8 {
+    pub fn check_flag(&self, flag: Flag) -> u8 {
         match flag {
             Flag::S => if self.flags & 0b10000000 == 0b10000000 { 1 }
             else { 0 },
@@ -222,6 +222,9 @@ impl Cpu {
     }
     pub fn debug_e(&self) -> u8 {
         self.e.value
+    }
+    pub fn debug_zero(&self) -> u8 {
+        self.flags.check_flag(Flag::Z)
     }
 }
 
@@ -522,13 +525,13 @@ fn set_flags_from_operation(result: i16, flags: Flags) -> Flags {
     return_flags.clear_flags();
 
     // Zero check
-    if result == 0 { return_flags.set_flag(Flag::Z) }
+    if (result as u8) == 0 { return_flags.set_flag(Flag::Z) }
 
     // Negative Check
     if result & 0x80 == 0x80 { return_flags.set_flag(Flag::S) }
 
     // Parity Check
-    if ((result & 0xff) as u8).count_ones() % 2 == 0 { return_flags.set_flag(Flag::P) }
+    if (result & 0xff).count_ones() % 2 == 0 { return_flags.set_flag(Flag::P) }
 
     // Carry Check
     if result > 0xff || result < 0x00 { return_flags.set_flag(Flag::CY) }

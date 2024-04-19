@@ -174,7 +174,7 @@ mod tests {
         }
 
         else {
-            if op_code == 0xcd && additional_bytes == (0x89, 0x06) {
+            if op_code == 0xc4 && additional_bytes == (0x89, 0x06) {
                 println!("Setting up SYSCALL");
             }
 
@@ -199,13 +199,8 @@ mod tests {
                 },
             }
 
-            // TODO: fix some bug
-            //  0x02b5 seems like a test completion
-            //      therefore bug must happen after 0x02c0
-            //  0x02ba is a success if A - 0xd9 sets the Z flag
-            //  Lots of rets checking lots of flags probably some problem there
             if cpu.a.value != old_a {
-                println!("0x{:02x} -> 0x{:02x}", old_a, cpu.a.value);
+                println!("0x{:02x} -> 0x{:02x}  Z: {}", old_a, cpu.a.value, cpu.debug_zero());
             }
             println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
         }
