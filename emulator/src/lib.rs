@@ -61,7 +61,10 @@ pub fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware,
         },
     }
 
-    // println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
+    println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
+    if cpu.pc.address > 0x6000 {
+        panic!();
+    }
     cycles as u64
 }
 
@@ -149,18 +152,14 @@ mod tests {
         cpu.memory.write_at(368, 0x07);
 
         // Skip DAA test
-        cpu.memory.write_at(0x59c, 0xc3); // JMP
-        cpu.memory.write_at(0x59d, 0xc2);
-        cpu.memory.write_at(0x59e, 0x05);
+        cpu.memory.write_at(0x059c, 0xc3); // JMP
+        cpu.memory.write_at(0x059d, 0xc2);
+        cpu.memory.write_at(0x059e, 0x05);
 
-        let mut old_a: u8 = cpu.a.value;
-        loop {
-            test_update(&mut cpu, old_a);
-            old_a = cpu.a.value;
-        }
+        while test_update(&mut cpu) == None {}
     }
-
-    fn test_update(cpu: &mut Cpu, old_a: u8) {
+ 
+    fn test_update(cpu: &mut Cpu) -> Option<&str> {
 
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
         let op_code_location: u16 = cpu.pc.address;
@@ -168,9 +167,8 @@ mod tests {
         let additional_bytes: (u8, u8) = (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
 
         if op_code == 0xcd && additional_bytes == (0x05, 0x00) {
-            os_syscall(cpu);
-
             cpu.pc.address += 2;
+            return os_syscall(cpu);
         }
 
         else {
@@ -199,22 +197,20 @@ mod tests {
                 },
             }
 
-            if cpu.a.value != old_a {
-                println!("0x{:02x} -> 0x{:02x}  Z: {}", old_a, cpu.a.value, cpu.debug_zero());
-            }
             println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
+            None
         }
     }
 
     fn handle_out(cpu: &Cpu, port_byte: u8) {
         match port_byte {
             0 => println!("Test Complete"),
-            1 => os_syscall(cpu),
+            1 => { os_syscall(cpu); },
             _ => panic!("No other ports"),
         }
     }
 
-    fn os_syscall(cpu: &Cpu) {
+    fn os_syscall(cpu: &Cpu) -> Option<&str> {
         match cpu.debug_c() {
             2 => println!("{}", cpu.debug_e()),
             9 => {
@@ -229,9 +225,14 @@ mod tests {
                 }
 
                 println!("{}", string_to_print);
-                panic!("Test Failed");
+
+                if !string_to_print.contains("OPERATIONAL") {
+                    panic!("Test Failed");
+                } else { return Some("success"); }
             },
             _ => panic!("No syscalls other than 9 and 2"),
         }
+
+        None
     }
 }

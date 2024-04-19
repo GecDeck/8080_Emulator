@@ -223,8 +223,8 @@ impl Cpu {
     pub fn debug_e(&self) -> u8 {
         self.e.value
     }
-    pub fn debug_zero(&self) -> u8 {
-        self.flags.check_flag(Flag::Z)
+    pub fn debug_l(&self) -> u8 {
+        self.l.value
     }
 }
 
@@ -300,7 +300,6 @@ fn dad(hl_pair: u16, reg_pair: u16, flags: &mut Flags) -> (u8, u8) {
     if result > u16::MAX as u32 { flags.set_flag(Flag::CY) }
     else { flags.clear_flag(Flag::CY) }
     // Setting carry flag
-    // TODO: find a way to call set_flags_from_operation here
 
     split_register_pair(result as u16)
 }
@@ -425,10 +424,6 @@ fn pop(stack_pointer: &mut AddressPointer, memory: &mut Memory) -> (u8, u8) {
     let byte_1 = memory.read_at(stack_pointer.address + 1);
     let byte_2 = memory.read_at(stack_pointer.address);
     // Find two bytes before stack pointer
-
-    memory.write_at(stack_pointer.address + 1, 0x00);
-    memory.write_at(stack_pointer.address, 0x00);
-    // Zeroes memory, probably not necessary but nice for cleanliness and debugging
 
     stack_pointer.address += 2;
     // stack shrinks upwards

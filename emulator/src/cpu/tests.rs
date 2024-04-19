@@ -182,8 +182,7 @@ fn test_branching_operations() {
 
     cpu.flags.set_flag(Flag::Z);
     assert_eq!(call((0xd4, 0xc3), Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory, cpu.pc.address), None);
-    assert_eq!(cpu.memory.read_at(0x2400), 0x00);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.sp.address, 0x2400);
     // Checking it didnt write a return address to the stack if it isn't jumping
 
     assert_eq!(ret(Some(cpu.flags.check_flag(Flag::Z) == 0), &mut cpu.sp, &mut cpu.memory), None);
@@ -392,10 +391,6 @@ fn test_operation_handling() {
     assert_eq!(cpu.sp.address, 0x2400);
     // The stack pointer should be reincremented
 
-    assert_eq!(cpu.memory.read_at(0x2400), 0x00);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
-    // The return address should be removed from the stack
-
     // CNZ & RNZ
     cpu.reset();
     cpu.pc.address = 0x0005;
@@ -438,8 +433,6 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0x0007);
     assert_eq!(cpu.sp.address, 0x2400);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
-    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
 
     // PCHL
     cpu.reset();
@@ -610,12 +603,12 @@ fn test_operation_handling() {
 
     let _ = handle_op_code(0xe3, &mut cpu);
     // stack looks like:
-    //  0x33
     //  0xee
+    //  0x33
     assert_eq!(cpu.h.value, 0xff);
     assert_eq!(cpu.l.value, 0x22);
-    assert_eq!(cpu.memory.read_at(cpu.sp.address), 0xee);
-    assert_eq!(cpu.memory.read_at(cpu.sp.address + 1), 0x33);
+    assert_eq!(cpu.memory.read_at(cpu.sp.address), 0x33);
+    assert_eq!(cpu.memory.read_at(cpu.sp.address + 1), 0xee);
 
     // XCHG
     cpu.reset();
