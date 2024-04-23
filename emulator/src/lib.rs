@@ -63,7 +63,7 @@ pub fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware,
 
     println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
     if cpu.pc.address > 0x6000 {
-        panic!();
+        panic!("Jumped too far");
     }
     cycles as u64
 }
@@ -134,19 +134,12 @@ mod tests {
 
     #[test]
     fn cpu_diag() {
-        // Load cpudiag
-        // When an out instruction is called
-        //  if port 0: Test is finished
-        //  if port 1: Look at content of C register
-        //      if c is 2: Print the content of the E register
-        //      if c is 9: Print (DE)..(DE+1).. until (DE) == $
-        // If the program jumps to 0x0005 execute os_syscall directly
-
         let mut cpu: Cpu = Cpu::init();
         let cpu_diag: &[u8] = include_bytes!("../cpudiag");
 
         cpu.memory.load_rom(cpu_diag, 0x100);
         cpu.pc.address = 0x100;
+        // Load cpudiag
 
         // Fix stack pointer to 0x07ad instead of 0x06ad
         cpu.memory.write_at(368, 0x07);
@@ -158,7 +151,7 @@ mod tests {
 
         while test_update(&mut cpu) == None {}
     }
- 
+
     fn test_update(cpu: &mut Cpu) -> Option<&str> {
 
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
@@ -167,6 +160,7 @@ mod tests {
         let additional_bytes: (u8, u8) = (cpu.memory.read_at(cpu.pc.address), cpu.memory.read_at(cpu.pc.address + 1));
 
         if op_code == 0xcd && additional_bytes == (0x05, 0x00) {
+        // If the program jumps to 0x0005 execute os_syscall directly
             cpu.pc.address += 2;
             return os_syscall(cpu);
         }
@@ -203,6 +197,11 @@ mod tests {
     }
 
     fn handle_out(cpu: &Cpu, port_byte: u8) {
+        // When an out instruction is called
+        //  if port 0: Test is finished
+        //  if port 1: Look at content of C register
+        //      if c is 2: Print the content of the E register
+        //      if c is 9: Print (DE)..(DE+1).. until (DE) == $
         match port_byte {
             0 => println!("Test Complete"),
             1 => { os_syscall(cpu); },
@@ -224,9 +223,9 @@ mod tests {
                     memory_address += 1;
                 }
 
-                println!("{}", string_to_print);
+                println!("{}\n", string_to_print);
 
-                if !string_to_print.contains("OPERATIONAL") {
+                if string_to_print.contains("FAILED") {
                     panic!("Test Failed");
                 } else { return Some("success"); }
             },

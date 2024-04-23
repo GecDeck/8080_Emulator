@@ -44,12 +44,14 @@ fn main() -> Result<(), u8> {
         while frame_cycles < cycle_max / 2 {
             frame_cycles += emulator::update(&mut raylib_handle, &mut hardware, &mut cpu);
         }
+        println!("INTERRUPT 1");
         cpu::generate_interrupt(0xcf, &mut cpu);
         // Call mid screen interrupt
 
         while frame_cycles < cycle_max {
             frame_cycles += emulator::update(&mut raylib_handle, &mut hardware, &mut cpu);
         }
+        println!("INTERRUPT 2");
         cpu::generate_interrupt(0xd7, &mut cpu);
         // Call full screen interrupt
 

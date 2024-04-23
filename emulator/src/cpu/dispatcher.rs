@@ -574,9 +574,11 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             };
         },
         0xe3 => { //XTHL
-            let (h, l): (u8, u8) = pop(&mut cpu.sp, &mut cpu.memory);
-            push((cpu.h.value, cpu.l.value), &mut cpu.sp, &mut cpu.memory);
+            let (h, l): (u8, u8) = (cpu.memory.read_at(cpu.sp.address + 1), cpu.memory.read_at(cpu.sp.address));
+            cpu.memory.write_at(cpu.sp.address, cpu.l.value);
+            cpu.memory.write_at(cpu.sp.address + 1, cpu.h.value);
             (cpu.h.value, cpu.l.value) = (h, l);
+
         },
         0xe4 => { // CPO
             let call_address: Option<u16> = call(
