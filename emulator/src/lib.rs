@@ -61,10 +61,7 @@ pub fn update(raylib_handle: &mut raylib::RaylibHandle, hardware: &mut Hardware,
         },
     }
 
-    println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
-    if cpu.pc.address > 0x6000 {
-        panic!("Jumped too far");
-    }
+    // println!("0x{:04x}: 0x{:02x}:   (0x{:02x}, 0x{:02x})", op_code_location, op_code, additional_bytes.0, additional_bytes.1);
     cycles as u64
 }
 
@@ -153,6 +150,7 @@ mod tests {
     }
 
     fn test_update(cpu: &mut Cpu) -> Option<&str> {
+        // Cut down version of the normal update function with some modifications for cpudiag
 
         let op_code: u8 = cpu.memory.read_at(cpu.pc.address);
         let op_code_location: u16 = cpu.pc.address;
@@ -210,6 +208,7 @@ mod tests {
     }
 
     fn os_syscall(cpu: &Cpu) -> Option<&str> {
+        // Writes out text from memory and panics if a test fails
         match cpu.debug_c() {
             2 => println!("{}", cpu.debug_e()),
             9 => {

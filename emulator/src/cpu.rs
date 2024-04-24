@@ -223,6 +223,9 @@ impl Cpu {
     pub fn debug_e(&self) -> u8 {
         self.e.value
     }
+    pub fn debug_h(&self) -> u8 {
+        self.h.value
+    }
     pub fn debug_l(&self) -> u8 {
         self.l.value
     }
@@ -381,7 +384,7 @@ fn call(
         Some(_) => {
             // Only add to stack if there is somewhere to jump to
             let return_adress_bytes: (u8, u8) = split_register_pair(return_adress);
-            push((return_adress_bytes.1, return_adress_bytes.0), stack_pointer, memory);
+            push((return_adress_bytes.0, return_adress_bytes.1), stack_pointer, memory);
             // Push return address to stack
             // 0xc3d4 will be pushed as 0xd4 0xc3
         }
@@ -399,7 +402,7 @@ fn ret(condition: Option<bool>, stack_pointer: &mut AddressPointer, memory: &mut
 
         let return_adress_bytes: (u8, u8) = pop(stack_pointer, memory);
         // if the address 0xc3d4 was pushed this should return (0xd4, 0xc3)
-        let return_adress: u16 = pair_registers(return_adress_bytes.1, return_adress_bytes.0);
+        let return_adress: u16 = pair_registers(return_adress_bytes.0, return_adress_bytes.1);
 
         return Some(return_adress);
     }
@@ -412,7 +415,9 @@ fn push(data_bytes: (u8, u8), stack_pointer: &mut AddressPointer, memory: &mut M
 
     memory.write_at(stack_pointer.address - 1, data_bytes.0);
     memory.write_at(stack_pointer.address - 2, data_bytes.1);
-    // d4 c3 will go in as d4 c3
+    // d4 c3 will go in as:
+    // d4
+    // c3
 
     stack_pointer.address -= 2;
     // stack grows downwards
