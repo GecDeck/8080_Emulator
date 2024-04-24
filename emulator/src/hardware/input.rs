@@ -43,43 +43,43 @@ pub fn read_input(raylib_handle: &raylib::prelude::RaylibHandle, hardware: &mut 
     // INPUT 1
     if raylib_handle.is_key_down(input_config.coin) {
         // TODO: Should the coin input be a toggle? not sure
-        hardware.ports.input_1 |= 0b10000000;
-    } else { hardware.ports.input_1 &= 0b01111111 }
+        hardware.ports.input_1 |= 0b00000001;
+    } else { hardware.ports.input_1 &= 0b11111110 }
 
     if raylib_handle.is_key_down(input_config.p2_start) {
-        hardware.ports.input_1 |= 0b01000000;
-    } else { hardware.ports.input_1 &= 0b10111111 }
-
-    if raylib_handle.is_key_down(input_config.p1_start) {
-        hardware.ports.input_1 |= 0b00100000;
-    } else { hardware.ports.input_1 &= 0b11011111 }
-
-    if raylib_handle.is_key_down(input_config.p1_shoot) {
-        hardware.ports.input_1 |= 0b00001000;
-    } else { hardware.ports.input_1 &= 0b11110111 }
-
-    if raylib_handle.is_key_down(input_config.p1_left) {
-        hardware.ports.input_1 |= 0b00000100;
-    } else { hardware.ports.input_1 &= 0b11111011 }
-
-    if raylib_handle.is_key_down(input_config.p1_right) {
         hardware.ports.input_1 |= 0b00000010;
     } else { hardware.ports.input_1 &= 0b11111101 }
 
+    if raylib_handle.is_key_down(input_config.p1_start) {
+        hardware.ports.input_1 |= 0b00000100;
+    } else { hardware.ports.input_1 &= 0b11111011 }
+
+    if raylib_handle.is_key_down(input_config.p1_shoot) {
+        hardware.ports.input_1 |= 0b00010000;
+    } else { hardware.ports.input_1 &= 0b11101111 }
+
+    if raylib_handle.is_key_down(input_config.p1_left) {
+        hardware.ports.input_1 |= 0b00100000;
+    } else { hardware.ports.input_1 &= 0b11011111 }
+
+    if raylib_handle.is_key_down(input_config.p1_right) {
+        hardware.ports.input_1 |= 0b01000000;
+    } else { hardware.ports.input_1 &= 0b10111111 }
+
     // INPUT 2
     if raylib_handle.is_key_down(input_config.tilt_button) {
-        hardware.ports.input_2 |= 0b00100000;
-    } else { hardware.ports.input_2 &= 0b11011111 }
-
-    if raylib_handle.is_key_down(input_config.p2_shoot) {
-        hardware.ports.input_2 |= 0b00001000;
-    } else { hardware.ports.input_2 &= 0b11110111 }
-
-    if raylib_handle.is_key_down(input_config.p2_left) {
         hardware.ports.input_2 |= 0b00000100;
     } else { hardware.ports.input_2 &= 0b11111011 }
 
+    if raylib_handle.is_key_down(input_config.p2_shoot) {
+        hardware.ports.input_2 |= 0b00010000;
+    } else { hardware.ports.input_2 &= 0b11101111 }
+
+    if raylib_handle.is_key_down(input_config.p2_left) {
+        hardware.ports.input_2 |= 0b00100000;
+    } else { hardware.ports.input_2 &= 0b11011111 }
+
     if raylib_handle.is_key_down(input_config.p2_right) {
-        hardware.ports.input_2 |= 0b00000010;
-    } else { hardware.ports.input_2 &= 0b11111101 }
+        hardware.ports.input_2 |= 0b01000000;
+    } else { hardware.ports.input_2 &= 0b10111111 }
 }

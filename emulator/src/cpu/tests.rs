@@ -382,8 +382,8 @@ fn test_operation_handling() {
     assert_eq!(cpu.sp.address, 0x23fe);
     // The stack pointer should be decremented 2
 
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x07);
-    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x07);
     // The return address of the next instruction should be on the stack
 
     let _ = handle_op_code(0xc9, &mut cpu);
@@ -414,8 +414,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x07);
-    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x07);
 
     cpu.flags.set_flag(Flag::Z);
     // Expect to not return
@@ -423,8 +423,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0xc3d4);
     assert_eq!(cpu.sp.address, 0x23fe);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x07);
-    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x07);
     // Nothing should change if not returning
 
     cpu.flags.clear_flags();
@@ -453,8 +453,8 @@ fn test_operation_handling() {
 
     assert_eq!(cpu.pc.address, 0x0038);
     assert_eq!(cpu.sp.address, 0x23fe);
-    assert_eq!(cpu.memory.read_at(0x23ff), 0x06);
-    assert_eq!(cpu.memory.read_at(0x23fe), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23ff), 0x00);
+    assert_eq!(cpu.memory.read_at(0x23fe), 0x06);
 
     // ANI
     cpu.reset();
