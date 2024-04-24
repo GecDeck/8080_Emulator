@@ -5,7 +5,6 @@
 - `invaders` Space Invaders rom **Not provided in repository**
 
 ## TODO
-- Coin input and score are counting up in hex
 - Audio
 - Clean up main and lib
 - Proper Config

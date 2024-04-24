@@ -97,7 +97,7 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             cpu.h.value = cpu.memory.read_at(cpu.pc.address);
             return Ok(1);
         },
-        0x27 => return Err("DAA"),
+        0x27 => cpu.a.value = daa(cpu.a.value, &mut cpu.flags),
         0x28 => {},
         0x29 => (cpu.h.value, cpu.l.value) = dad(
             pair_registers(cpu.h.value, cpu.l.value),

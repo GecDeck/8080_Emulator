@@ -350,11 +350,45 @@ fn sbb(reg_1: u8, reg_2: u8, flags: &mut Flags) -> u8 {
     (result & 0xff) as u8
 }
 
+fn daa(a: u8, flags: &mut Flags) -> u8 {
+    // Changes a hex number into its decimal equivalent
+    //  i.e. if A is 0x0a it becomes 0x10
+    let mut result: u16 = a as u16;
+
+    let lo: u16 = result & 0b0000_1111;
+    // Ones digit is the 4 lo bits
+    if lo > 9 || flags.check_flag(Flag::AC) == 1 {
+        // If the first digit is above 9 or the auxilliary carry flag is set
+        result += 6;
+        // A hex digit plus 6 is it's equivalent in decimal
+        //  i.e. 0x0a + 6 = 0x10
+
+        if (lo + 6) > 0x0f {
+            flags.set_flag(Flag::AC);
+        } else { flags.clear_flag(Flag::AC); }
+        // Sets auxilliary carry is necessary
+    }
+
+    let mut hi: u16 = (result & 0b1111_0000) >> 4;
+    // Tens digit is 4 hi bits
+    if hi > 9 || flags.check_flag(Flag::CY) == 1 {
+        hi += 6;
+    }
+    if (hi + 6) > 0x0f {
+        flags.set_flag(Flag::AC);
+    } else { flags.clear_flag(Flag::AC); }
+
+    result = (hi << 4) | (result & 0b0000_1111);
+    // Combines the two digits
+
+    *flags = set_flags_from_operation(result as i16, *flags);
+
+    result as u8
+}
+
 fn jmp(address_bytes: (u8, u8), condition: Option<bool>) -> Option<u16> {
     // Jumps to an address in memory, and optionally does so conditionaly
     // The condition will be whether a specific flag is set or not
-    // TODO: should this modify the pc address directly???
-    //  arithmetic operations modify the flags directly but I don't know if I actually like that
 
     if condition.is_none() | condition.is_some_and(|condition| condition == true) {
         // If there is no condition or the supplied condition is true do the following
