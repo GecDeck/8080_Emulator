@@ -11,9 +11,7 @@
     - Input config
     - Window size
     - Difficulty settings
-- Added cool background image
+- Add cool background image
 - Stretch the pixels to be more accurate
 - Add scanline filter
-- Correct the green layer to not cover the number of lives and credit sections
-- Correct the colours to be even more accurate
 - Add some glow to represent crt's glow

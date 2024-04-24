@@ -11,9 +11,9 @@ pub const HEIGHT: i32 = 1080;
 const INVADERS_WIDTH: i32 = 224;
 const INVADERS_HEIGHT: i32 = 256;
 
-const TOP_COLOUR: Color = Color::RED;
+const TOP_COLOUR: &str = "F41EFA";
 const MID_COLOUR: Color = Color::WHITE;
-const BOTTOM_COLOUR: Color = Color::GREEN;
+const BOTTOM_COLOUR: &str = "22CC00";
 const OFF_COLOUR: Color = Color::BLACK;
 
 const DEBUG_TEXT_SIZE: i32 = 20;
@@ -95,8 +95,7 @@ pub fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibT
     let game_scaled_height: i32 = INVADERS_HEIGHT * scale;
     let game_x_offset: i32 = (WIDTH - game_scaled_width) / 2;
     let game_y_offset: i32 = (HEIGHT - game_scaled_height) / 2;
-    draw_handle.draw_rectangle(game_x_offset, game_y_offset, INVADERS_WIDTH * scale, INVADERS_HEIGHT * scale, Color::BLUE);
-    // Move the game to the middle of the screen and add a background behind it
+    // Move the game to the middle of the screen
 
     let vram: &[u8] = cpu.memory.read_vram();
 
@@ -111,11 +110,20 @@ pub fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibT
                 let y: i32 = (INVADERS_HEIGHT - ((iy * 8) as i32 + b)) * scale;
 
                 if byte & 1 == 1 {
-                    let colour: Color = match iy * 8 {
-                        201..=219 => TOP_COLOUR,
-                        0..=79 => BOTTOM_COLOUR,
+                    let mut colour: Color = match iy * 8 {
+                        201..=219 => Color::from_hex(TOP_COLOUR).unwrap(),
+                        0..=15 => Color::from_hex(BOTTOM_COLOUR).unwrap(),
+                        16 => MID_COLOUR,
+                        17..=71 => Color::from_hex(BOTTOM_COLOUR).unwrap(),
                         _ => MID_COLOUR,
                     };
+                    if colour == Color::from_hex(BOTTOM_COLOUR).unwrap() && iy * 8 < 15 {
+                        match ix {
+                            0..=25 => colour = MID_COLOUR,
+                            135..=INVADERS_WIDTH => colour = MID_COLOUR,
+                            _ => {},
+                        }
+                    }
                     draw_handle.draw_rectangle(x + game_x_offset, y + game_y_offset, scale, scale, colour);
                 }
 
