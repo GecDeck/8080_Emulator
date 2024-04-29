@@ -11,6 +11,7 @@ const Z_FLAG_BIT: u8 = 6;
 const AC_FLAG_BIT: u8 = 4;
 const P_FLAG_BIT: u8 = 2;
 const CY_FLAG_BIT: u8 = 0;
+// Bit positions of each processor flag
 
 // CPU HARDWARE
 
