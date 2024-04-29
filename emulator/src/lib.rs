@@ -73,15 +73,15 @@ pub fn render(raylib_handle: &mut raylib::RaylibHandle, thread: &raylib::RaylibT
     draw_handle.clear_background(OFF_COLOUR);
 
     // Debug Rendering
-    draw_handle.draw_fps(0, 0);
-    let input_1: String = format!("INPUT_1: 0b{:08b}", hardware.debug_input1());
-    let input_2: String = format!("INPUT_2: 0b{:08b}", hardware.debug_input2());
-    let stack_pointer: String = format!("SP:    0x{:04x}", cpu.debug_stack_pointer());
-    let program_counter: String = format!("PC:  0x{:04x}", cpu.debug_program_counter());
+    let coin: &str = "Insert Coin: Enter";
+    let start: &str = "P1 Start: Q";
+    let left: &str = "P1 Left: A";
+    let right: &str = "P1 Right: D";
+    let shoot: &str = "P1 Shoot: S";
 
-    let debug_text: Vec<&str> = vec![&input_1, &input_2, &stack_pointer, &program_counter];
+    let debug_text: Vec<&str> = vec![coin, start, left, right, shoot];
     for (i, text) in debug_text.iter().enumerate() {
-        draw_handle.draw_text(text, 0, (1 + i as i32)*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
+        draw_handle.draw_text(text, 0, (i as i32)*DEBUG_TEXT_SIZE, DEBUG_TEXT_SIZE, MID_COLOUR);
         // 1 + i to start the debug strings after the fps
     }
     // Draws each debug string in a column

@@ -6,6 +6,12 @@ pub mod dispatcher;
 const STACK_MIN: u16 = 0x2001;
 // This should be where the minimum stack address is
 
+const S_FLAG_BIT: u8 = 7;
+const Z_FLAG_BIT: u8 = 6;
+const AC_FLAG_BIT: u8 = 4;
+const P_FLAG_BIT: u8 = 2;
+const CY_FLAG_BIT: u8 = 0;
+
 // CPU HARDWARE
 
 #[derive(Clone, Copy)]
@@ -97,6 +103,17 @@ pub enum Flag {
     P,
     CY,
 }
+impl Flag {
+    fn position(&self) -> u8 {
+        match *self {
+            Self::S => S_FLAG_BIT,
+            Self::Z => Z_FLAG_BIT,
+            Self::AC => AC_FLAG_BIT,
+            Self::P => P_FLAG_BIT,
+            Self::CY => CY_FLAG_BIT,
+        }
+    }
+}
 impl Flags {
     pub fn new() -> Self {
         Self {
@@ -105,44 +122,19 @@ impl Flags {
     }
 
     pub fn set_flag(&mut self, flag: Flag) {
-        match flag {
-            Flag::S => self.flags |= 0b10000000,
-            Flag::Z => self.flags |= 0b01000000,
-            Flag::AC => self.flags |= 0b00010000,
-            Flag::P => self.flags |= 0b00000100,
-            Flag::CY => self.flags |= 0b00000001,
-        }
-
-        assert_ne!(self.flags << 5, 0b11100000);
-        // Asserts that none of the extra 3 bits are set
-        // TODO: This might not be necessary
+        // Shifts a 1 bit to set a given flag
+        self.flags |= 1 << flag.position();
     }
 
     pub fn clear_flag(&mut self, flag: Flag) {
-        match flag {
-            Flag::S => self.flags &= 0b01111111,
-            Flag::Z => self.flags &= 0b10111111,
-            Flag::AC => self.flags &= 0b11101111,
-            Flag::P => self.flags &= 0b11111011,
-            Flag::CY => self.flags &= 0b11111110,
-        }
-
-        assert_ne!(self.flags << 5, 0b11100000);
+        // Shifts a zero bit over to clear a bit depending on the given flag
+        self.flags &= 0b11111110 << flag.position();
     }
 
     pub fn check_flag(&self, flag: Flag) -> u8 {
-        match flag {
-            Flag::S => if self.flags & 0b10000000 == 0b10000000 { 1 }
-            else { 0 },
-            Flag::Z => if self.flags & 0b01000000 == 0b01000000 { 1 }
-            else { 0 },
-            Flag::AC => if self.flags & 0b00010000 == 0b00010000 { 1 }
-            else { 0 },
-            Flag::P => if self.flags & 0b00000100 == 0b00000100 { 1 }
-            else { 0 },
-            Flag::CY => if self.flags & 0b00000001 == 0b00000001 { 1 }
-            else { 0 },
-        }
+        // Shifts a 1 bit over to check if the given flag is set
+        if self.flags & (1 << flag.position()) == (1 << flag.position()) { 1 }
+        else { 0 }
     }
 
     pub fn clear_flags(&mut self) {
@@ -203,14 +195,6 @@ impl Cpu {
             return true;
         }
         false
-    }
-
-    // Being used for debug info
-    pub fn debug_stack_pointer(&self) -> u16 {
-        self.sp.address
-    }
-    pub fn debug_program_counter(&self) -> u16 {
-        self.pc.address
     }
 
     // Being used for CPU DIAG tests
