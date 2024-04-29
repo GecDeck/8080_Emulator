@@ -15,3 +15,4 @@
 - Stretch the pixels to be more accurate
 - Add scanline filter
 - Add some glow to represent crt's glow
+- There seems to be a bug where you lose all your existing credits when you start a game

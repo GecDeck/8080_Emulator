@@ -104,9 +104,6 @@ pub fn handle_op_code(op_code: u8, cpu: &mut Cpu) -> Result<u16, &str> {
             pair_registers(cpu.h.value, cpu.l.value),
             &mut cpu.flags
             ),
-        // This is documented as HL = HL + HI
-        //  But I think it's supposed to just add HL to itself? I don't what what I means
-        //  TODO: find out what I means
         0x2a => { // LHLD
             let addr: u16 = pair_registers(
                 cpu.memory.read_at(cpu.pc.address + 1), cpu.memory.read_at(cpu.pc.address)

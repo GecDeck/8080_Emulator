@@ -1,6 +1,19 @@
 use raylib::prelude::KeyboardKey;
 use super::*;
 
+const COIN_BIT: u8 = 0;
+const P2_START_BIT: u8 = 1;
+const P1_START_BIT: u8 = 2;
+const P1_SHOOT_BIT: u8 = 4;
+const P1_LEFT_BIT: u8 = 5;
+const P1_RIGHT_BIT: u8 = 6;
+// Input 1 but order
+
+const TILT_BIT: u8 = 2;
+const P2_SHOOT_BIT: u8 = 4;
+const P2_LEFT_BIT: u8 = 5;
+const P2_RIGHT_BIT: u8 = 6;
+
 #[derive(Debug, Clone, Copy)]
 pub struct InputConfig {
     coin: KeyboardKey,
@@ -42,44 +55,43 @@ pub fn read_input(raylib_handle: &raylib::prelude::RaylibHandle, hardware: &mut 
 
     // INPUT 1
     if raylib_handle.is_key_down(input_config.coin) {
-        // TODO: Should the coin input be a toggle? not sure
-        hardware.ports.input_1 |= 0b00000001;
-    } else { hardware.ports.input_1 &= 0b11111110 }
+        hardware.ports.input_1 |= 1 << COIN_BIT;
+    } else { hardware.ports.input_1 &= 0b11111110_u8.rotate_left(COIN_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p2_start) {
-        hardware.ports.input_1 |= 0b00000010;
-    } else { hardware.ports.input_1 &= 0b11111101 }
+        hardware.ports.input_1 |= 1 << P2_START_BIT;
+    } else { hardware.ports.input_1 &= 0b11111110_u8.rotate_left( P2_START_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p1_start) {
-        hardware.ports.input_1 |= 0b00000100;
-    } else { hardware.ports.input_1 &= 0b11111011 }
+        hardware.ports.input_1 |= 1 << P1_START_BIT;
+    } else { hardware.ports.input_1 &= 0b11111110_u8.rotate_left(P1_START_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p1_shoot) {
-        hardware.ports.input_1 |= 0b00010000;
-    } else { hardware.ports.input_1 &= 0b11101111 }
+        hardware.ports.input_1 |= 1 << P1_SHOOT_BIT;
+    } else { hardware.ports.input_1 &= 0b11111110_u8.rotate_left(P1_SHOOT_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p1_left) {
-        hardware.ports.input_1 |= 0b00100000;
-    } else { hardware.ports.input_1 &= 0b11011111 }
+        hardware.ports.input_1 |= 1 << P1_LEFT_BIT;
+    } else { hardware.ports.input_1 &= 0b11111110_u8.rotate_left(P1_LEFT_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p1_right) {
-        hardware.ports.input_1 |= 0b01000000;
-    } else { hardware.ports.input_1 &= 0b10111111 }
+        hardware.ports.input_1 |= 1 << P1_RIGHT_BIT;
+    } else { hardware.ports.input_1 &= 0b11111110_u8.rotate_left(P1_RIGHT_BIT as u32) }
 
     // INPUT 2
     if raylib_handle.is_key_down(input_config.tilt_button) {
-        hardware.ports.input_2 |= 0b00000100;
-    } else { hardware.ports.input_2 &= 0b11111011 }
+        hardware.ports.input_2 |= 1 << TILT_BIT;
+    } else { hardware.ports.input_2 &= 0b11111110_u8.rotate_left(TILT_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p2_shoot) {
-        hardware.ports.input_2 |= 0b00010000;
-    } else { hardware.ports.input_2 &= 0b11101111 }
+        hardware.ports.input_2 |= 1 << P2_SHOOT_BIT;
+    } else { hardware.ports.input_2 &= 0b11111110_u8.rotate_left(P2_SHOOT_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p2_left) {
-        hardware.ports.input_2 |= 0b00100000;
-    } else { hardware.ports.input_2 &= 0b11011111 }
+        hardware.ports.input_2 |= 1 << P2_LEFT_BIT;
+    } else { hardware.ports.input_2 &= 0b11111110_u8.rotate_left(P2_LEFT_BIT as u32) }
 
     if raylib_handle.is_key_down(input_config.p2_right) {
-        hardware.ports.input_2 |= 0b01000000;
-    } else { hardware.ports.input_2 &= 0b10111111 }
+        hardware.ports.input_2 |= 1 << P2_RIGHT_BIT;
+    } else { hardware.ports.input_2 &= 0b11111110_u8.rotate_left(P2_RIGHT_BIT as u32) }
 }

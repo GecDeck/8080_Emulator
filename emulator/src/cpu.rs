@@ -129,7 +129,7 @@ impl Flags {
 
     pub fn clear_flag(&mut self, flag: Flag) {
         // Shifts a zero bit over to clear a bit depending on the given flag
-        self.flags &= 0b11111110 << flag.position();
+        self.flags &= 0b11111110_u8.rotate_left(flag.position() as u32);
     }
 
     pub fn check_flag(&self, flag: Flag) -> u8 {

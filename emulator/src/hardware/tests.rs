@@ -33,11 +33,4 @@ fn test_handle_io() {
     hardware.ports.shift_amount = 0b0000_0011;
 
     assert_eq!(handle_io(0xdb, &mut hardware, 3, 0x00), Some(0xff));
-
-    // INPUT
-    // TODO: write this
-    // How do I test this well? This is why you write your tests before the code
-
-    // SOUND
-    // TODO: write this
 }

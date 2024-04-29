@@ -40,6 +40,11 @@ fn test_flags_set_clear() {
     flags.set_flag(Flag::AC);
     assert_eq!(flags.flags, 0b00010000);
     flags.clear_flags();
+
+    flags.set_flag(Flag::CY);
+    flags.set_flag(Flag::S);
+    flags.clear_flag(Flag::S);
+    assert_eq!(flags.check_flag(Flag::CY), 1);
 }
 
 #[test]
